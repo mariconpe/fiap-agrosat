@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/propriedades")
-@Tag(name = "Propriedades", description = "Gerenciamento de propriedades rurais")
+@Tag(name = "Propriedades")
 public class PropriedadeController {
 
     private final PropriedadeService service;

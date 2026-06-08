@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/alertas")
-@Tag(name = "Alertas", description = "Gestão de alertas e verificação de riscos")
+@Tag(name = "Alertas")
 public class AlertaController {
 
     private final AlertaService alertaService;

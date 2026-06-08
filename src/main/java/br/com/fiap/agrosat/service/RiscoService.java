@@ -16,24 +16,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Motor de regras de risco — coração do AgroSat.
+ * Engine de risco do AgroSat.
  * <p>
- * É executado sob demanda (POST /api/alertas/verificar) e aplica as regras:
- * <ul>
- *   <li><b>Seca:</b> precipitação &lt; 10mm nos últimos 15 dias <b>E</b>
- *       umidade do solo &lt; 20%</li>
- *   <li><b>Praga:</b> NDVI caiu &gt; 0.15 em 7 dias <b>E</b>
- *       temperatura máxima &gt; 30°C</li>
- * </ul>
+ * Roda sob demanda e aplica duas regras:
+ * <ol>
+ *   <li>Seca: precipitação acumulada &lt; 10mm nos últimos 15 dias
+ *       E umidade do solo &lt; 20%</li>
+ *   <li>Praga: NDVI caiu mais de 0.15 nos últimos 7 dias
+ *       E temperatura máxima passou de 30°C no período</li>
+ * </ol>
  */
 @Service
 public class RiscoService {
 
+    // limites definidos com base em literatura agronômica (EMBRAPA, FAO)
     private static final BigDecimal LIMITE_PRECIPITACAO = new BigDecimal("10");
     private static final BigDecimal LIMITE_UMIDADE_SOLO = new BigDecimal("20");
     private static final BigDecimal QUEDA_NDVI_LIMITE = new BigDecimal("0.15");
@@ -55,9 +55,8 @@ public class RiscoService {
     }
 
     /**
-     * Executa todas as regras de risco para a propriedade informada.
-     *
-     * @return lista de alertas gerados nesta verificação
+     * Dispara as regras de risco para uma propriedade.
+     * Chamado pelo endpoint POST /api/alertas/verificar.
      */
     @Transactional
     public List<AlertaResponse> verificarRiscos(Long propriedadeId) {
@@ -67,25 +66,26 @@ public class RiscoService {
 
         List<AlertaResponse> gerados = new ArrayList<>();
 
-        // ── Risco de Seca ──
         AlertaResponse seca = verificarSeca(propriedade);
         if (seca != null) gerados.add(seca);
 
-        // ── Risco de Praga ──
         AlertaResponse praga = verificarPraga(propriedade);
         if (praga != null) gerados.add(praga);
 
         return gerados;
     }
 
-    // ──────────────── Regra: SECA ────────────────
+    // ================================================================
+    //  REGRA 1 — SECA
+    //  Gatilho: pouca chuva + solo seco
+    // ================================================================
 
     private AlertaResponse verificarSeca(Propriedade propriedade) {
         Long propId = propriedade.getId();
         LocalDate quinzeDiasAtras = LocalDate.now().minusDays(15);
         String nome = propriedade.getNome();
 
-        // precipitação nos últimos 15 dias
+        // soma a precipitação dos últimos 15 dias
         List<DadoSatelite> climaRecente = dadoSateliteRepository
                 .findByPropriedade_IdAndTipoAndDataColetaAfterOrderByDataColetaAsc(
                         propId, TipoDadoSatelite.CLIMA, quinzeDiasAtras);
@@ -97,16 +97,23 @@ public class RiscoService {
                         : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (totalPrecipitacao.compareTo(LIMITE_PRECIPITACAO) >= 0) return null;
+        if (totalPrecipitacao.compareTo(LIMITE_PRECIPITACAO) >= 0) {
+            return null; // choveu o suficiente
+        }
 
-        // umidade do solo mais recente
+        // pega a leitura mais recente de umidade do solo
         List<Sensor> sensores = sensorRepository.findByPropriedade_IdAndTipo(
                 propId, TipoSensor.UMIDADE_SOLO);
-        if (sensores.isEmpty()) return null;
+        if (sensores.isEmpty()) {
+            return null; // sem sensor, não dá pra avaliar
+        }
 
-        Sensor ultimoSensor = sensores.get(0); // já ordenado DESC
-        if (ultimoSensor.getValor().compareTo(LIMITE_UMIDADE_SOLO) >= 0) return null;
+        Sensor ultimoSensor = sensores.get(0);
+        if (ultimoSensor.getValor().compareTo(LIMITE_UMIDADE_SOLO) >= 0) {
+            return null; // solo ainda está úmido
+        }
 
+        // as duas condições bateram → dispara alerta
         return alertaService.criarAlerta(propId, TipoAlerta.SECA,
                 SeveridadeAlerta.ALTA,
                 String.format(
@@ -116,30 +123,38 @@ public class RiscoService {
                         nome, totalPrecipitacao, ultimoSensor.getValor()));
     }
 
-    // ──────────────── Regra: PRAGA ────────────────
+    // ================================================================
+    //  REGRA 2 — PRAGA
+    //  Gatilho: NDVI caindo rápido + calor
+    // ================================================================
 
     private AlertaResponse verificarPraga(Propriedade propriedade) {
         Long propId = propriedade.getId();
         LocalDate seteDiasAtras = LocalDate.now().minusDays(7);
         String nome = propriedade.getNome();
 
-        // NDVI dos últimos 7 dias
+        // pega histórico de NDVI dos últimos 7 dias
         List<DadoSatelite> ndviRecente = dadoSateliteRepository
                 .findByPropriedade_IdAndTipoAndDataColetaAfterOrderByDataColetaAsc(
                         propId, TipoDadoSatelite.NDVI, seteDiasAtras);
 
-        if (ndviRecente.size() < 2) return null;
+        if (ndviRecente.size() < 2) {
+            return null; // precisa de pelo menos 2 medições pra comparar
+        }
 
         BigDecimal primeiroNdvi = ndviRecente.get(0).getNdvi();
         BigDecimal ultimoNdvi = ndviRecente.get(ndviRecente.size() - 1).getNdvi();
 
         if (primeiroNdvi == null || ultimoNdvi == null) return null;
 
+        // calcula a queda do NDVI no período
         BigDecimal queda = primeiroNdvi.subtract(ultimoNdvi);
 
-        if (queda.compareTo(QUEDA_NDVI_LIMITE) <= 0) return null;
+        if (queda.compareTo(QUEDA_NDVI_LIMITE) <= 0) {
+            return null; // queda dentro do normal
+        }
 
-        // temperatura máxima recente
+        // verifica se teve temperatura acima de 30°C no período
         List<DadoSatelite> climaRecente = dadoSateliteRepository
                 .findByPropriedade_IdAndDataColetaAfterOrderByDataColetaAsc(
                         propId, seteDiasAtras);
@@ -148,8 +163,11 @@ public class RiscoService {
                 .anyMatch(d -> d.getTempMax() != null &&
                         d.getTempMax().compareTo(TEMP_LIMITE_PRAGA) > 0);
 
-        if (!tempAlta) return null;
+        if (!tempAlta) {
+            return null; // sem calor extremo, menos provável ser praga
+        }
 
+        // condições batendo → alerta de possível infestação
         return alertaService.criarAlerta(propId, TipoAlerta.PRAGA,
                 SeveridadeAlerta.MEDIA,
                 String.format(

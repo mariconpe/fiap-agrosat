@@ -15,15 +15,8 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("AgroSat API")
                         .version("0.1.0")
-                        .description("""
-                                Plataforma de monitoramento agrícola via dados de satélite.
-                                
-                                **Global Solution 2026/1 — 4ESOA — FIAP**
-                                
-                                Conexão com ODS 2 (Fome Zero e Agricultura Sustentável).
-                                """)
+                        .description("API da plataforma AgroSat — Global Solution 2026/1 — 4ESOA FIAP.")
                         .contact(new Contact()
-                                .name("Equipe AgroSat")
-                                .email("agrosat@fiap.com.br")));
+                                .name("Equipe AgroSat")));
     }
 }

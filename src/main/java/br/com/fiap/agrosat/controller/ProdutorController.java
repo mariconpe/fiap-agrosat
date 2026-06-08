@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/produtores")
-@Tag(name = "Produtores", description = "Cadastro e consulta de produtores rurais")
+@Tag(name = "Produtores")
 public class ProdutorController {
 
     private final ProdutorService service;

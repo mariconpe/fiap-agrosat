@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@Tag(name = "Sensores e Dados", description = "Coleta de IoT e dados de satélite")
+@Tag(name = "Sensores")
 public class SensorController {
 
     private final SensorService sensorService;
