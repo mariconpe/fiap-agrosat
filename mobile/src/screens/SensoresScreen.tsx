@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarSensores } from "../services/api";
 import type { Sensor } from "../types";
 
@@ -14,6 +15,7 @@ export default function SensoresScreen() {
   const [sensores, setSensores] = useState<Sensor[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
+  const insets = useSafeAreaInsets();
 
   async function carregarSensores() {
     const dados = await listarSensores(1);
@@ -95,7 +97,7 @@ export default function SensoresScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
         data={sensores}
         keyExtractor={(s) => s.id.toString()}

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarAlertas, verificarRiscos } from "../services/api";
 import type { Alerta } from "../types";
 
@@ -16,6 +17,7 @@ export default function AlertasScreen() {
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
   const [verificando, setVerificando] = useState(false);
+  const insets = useSafeAreaInsets();
 
   async function carregarAlertas() {
     const dados = await listarAlertas(1); // propriedade ID 1
@@ -91,7 +93,7 @@ export default function AlertasScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <TouchableOpacity
         style={[styles.botaoVerificar, verificando && { opacity: 0.6 }]}
         onPress={executarVerificacao}
