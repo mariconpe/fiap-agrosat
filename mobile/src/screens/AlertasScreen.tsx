@@ -1,167 +1,328 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
   ActivityIndicator,
-  TouchableOpacity,
+  FlatList,
+  Pressable,
   RefreshControl,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+
 import { listarAlertas, verificarRiscos } from "../services/api";
 import type { Alerta } from "../types";
+import ScreenHeader from "../components/ScreenHeader";
+import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
+import { useAlertas } from "../context/AlertasContext";
+
+const PROPRIEDADE_ID = 1;
+
+const SEVERIDADE = {
+  ALTA: { cor: colors.critical, tinta: colors.criticalTint, label: "Alta" },
+  MEDIA: { cor: colors.warning, tinta: colors.warningTint, label: "Media" },
+  BAIXA: { cor: colors.success, tinta: colors.successTint, label: "Baixa" },
+} as const;
 
 export default function AlertasScreen() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
   const [verificando, setVerificando] = useState(false);
+  const { setNaoLidos } = useAlertas();
 
-  async function carregarAlertas() {
-    const dados = await listarAlertas(1); // propriedade ID 1
+  const atualizarNaoLidos = useCallback(
+    (lista: Alerta[]) => {
+      setNaoLidos(lista.filter((a) => !a.lida).length);
+    },
+    [setNaoLidos]
+  );
+
+  const carregarAlertas = useCallback(async () => {
+    const dados = await listarAlertas(PROPRIEDADE_ID);
     setAlertas(dados);
+    atualizarNaoLidos(dados);
     setCarregando(false);
     setRecarregando(false);
-  }
+  }, [atualizarNaoLidos]);
 
-  async function executarVerificacao() {
+  useEffect(() => {
+    carregarAlertas();
+  }, [carregarAlertas]);
+
+  const executarVerificacao = async () => {
     setVerificando(true);
-    const res = await verificarRiscos(1);
-    setAlertas(res.alertas);
+    const resultado = await verificarRiscos(PROPRIEDADE_ID);
+    setAlertas(resultado.alertas);
+    atualizarNaoLidos(resultado.alertas);
     setVerificando(false);
-  }
-
-  useEffect(() => { carregarAlertas(); }, []);
-
-  if (carregando) {
-    return (
-      <View style={styles.centro}>
-        <ActivityIndicator size="large" color="#2E7D32" />
-      </View>
+    Haptics.notificationAsync(
+      resultado.alertas.some((a) => !a.lida)
+        ? Haptics.NotificationFeedbackType.Warning
+        : Haptics.NotificationFeedbackType.Success
     );
-  }
+  };
 
-  function corSeveridade(severidade: string): string {
-    if (severidade === "ALTA") return "#F44336";
-    if (severidade === "MEDIA") return "#FF9800";
-    return "#4CAF50";
-  }
-
-  function iconeTipo(tipo: string): string {
-    return tipo === "SECA" ? "🏜️" : "🐛";
-  }
-
-  function renderizarAlerta({ item }: { item: Alerta }) {
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.icone}>{iconeTipo(item.tipo)}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tipo}>
-              {item.tipo === "SECA" ? "Risco de Seca" : "Possível Praga"}
-            </Text>
-            <Text style={styles.data}>
-              {new Date(item.dataCriacao).toLocaleString("pt-BR")}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.severidade,
-              { backgroundColor: corSeveridade(item.severidade) },
-            ]}
-          >
-            <Text style={styles.severidadeTexto}>
-              {item.severidade === "ALTA"
-                ? "Alta"
-                : item.severidade === "MEDIA"
-                ? "Média"
-                : "Baixa"}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.mensagem}>{item.mensagem}</Text>
-        <Text style={styles.propriedade}>📍 {item.propriedadeNome}</Text>
-        {!item.lida && (
-          <TouchableOpacity style={styles.botaoLida}>
-            <Text style={styles.botaoLidaTexto}>Marcar como lido</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+  const marcarComoLido = (alerta: Alerta) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const atualizados = alertas.map((a) =>
+      a.id === alerta.id ? { ...a, lida: true } : a
     );
-  }
+    setAlertas(atualizados);
+    atualizarNaoLidos(atualizados);
+  };
+
+  const naoLidos = alertas.filter((a) => !a.lida).length;
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={[styles.botaoVerificar, verificando && { opacity: 0.6 }]}
-        onPress={executarVerificacao}
-        disabled={verificando}
-      >
-        <Text style={styles.botaoVerificarTexto}>
-          {verificando ? "⏳ Verificando..." : "🔍 Verificar riscos agora"}
-        </Text>
-      </TouchableOpacity>
-
-      <FlatList
-        data={alertas}
-        keyExtractor={(a) => a.id.toString()}
-        renderItem={renderizarAlerta}
-        contentContainerStyle={{ padding: 12, paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl refreshing={recarregando} onRefresh={() => {
-            setRecarregando(true); carregarAlertas();
-          }} />
+      <ScreenHeader
+        titulo="Alertas"
+        subtitulo={
+          naoLidos === 0
+            ? "Nenhum alerta nao lido"
+            : `${naoLidos} ${naoLidos === 1 ? "nao lido" : "nao lidos"}`
         }
-        ListEmptyComponent={
-          <View style={styles.vazio}>
-            <Text style={styles.vazioIcone}>✅</Text>
-            <Text style={styles.vazioTexto}>Nenhum alerta no momento</Text>
-          </View>
+        acessorio={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Verificar riscos agora"
+            onPress={executarVerificacao}
+            disabled={verificando}
+            style={({ pressed }) => [
+              styles.botaoVerificar,
+              pressed && styles.pressionado,
+            ]}
+          >
+            {verificando ? (
+              <ActivityIndicator size="small" color={colors.brand} />
+            ) : (
+              <Ionicons name="scan" size={20} color={colors.brand} />
+            )}
+          </Pressable>
         }
       />
+
+      {carregando ? (
+        <View style={styles.listaConteudo}>
+          <View style={[styles.esqueleto, { height: 130 }]} />
+          <View style={[styles.esqueleto, { height: 130 }]} />
+        </View>
+      ) : (
+        <FlatList
+          data={alertas}
+          keyExtractor={(alerta) => alerta.id.toString()}
+          renderItem={({ item }) => (
+            <CartaoAlerta
+              alerta={item}
+              aoMarcarLido={() => marcarComoLido(item)}
+            />
+          )}
+          contentContainerStyle={[
+            styles.listaConteudo,
+            { paddingBottom: TAB_BAR_CLEARANCE },
+            alertas.length === 0 && styles.listaVazia,
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={recarregando}
+              tintColor={colors.brand}
+              onRefresh={() => {
+                setRecarregando(true);
+                carregarAlertas();
+              }}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.vazio}>
+              <View style={styles.vazioIcone}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={28}
+                  color={colors.brand}
+                />
+              </View>
+              <Text style={styles.vazioTitulo}>Tudo em ordem</Text>
+              <Text style={styles.vazioTexto}>
+                Nenhum risco detectado na propriedade. Toque no botao acima para
+                rodar a verificacao agora.
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
 
+// ----- componentes auxiliares -----
+
+function CartaoAlerta({
+  alerta,
+  aoMarcarLido,
+}: {
+  alerta: Alerta;
+  aoMarcarLido: () => void;
+}) {
+  const severidade = SEVERIDADE[alerta.severidade];
+  const isSeca = alerta.tipo === "SECA";
+
+  return (
+    <View style={[styles.card, alerta.lida && styles.cardLido]}>
+      <View style={styles.cardTopo}>
+        <View style={[styles.cardIcone, { backgroundColor: severidade.tinta }]}>
+          <Ionicons
+            name={isSeca ? "sunny" : "bug"}
+            size={18}
+            color={severidade.cor}
+          />
+        </View>
+        <View style={styles.cardCabecalho}>
+          <View style={styles.cardTituloLinha}>
+            {!alerta.lida && <View style={styles.pontoNaoLido} />}
+            <Text style={styles.cardTitulo}>
+              {isSeca ? "Risco de seca" : "Possivel praga"}
+            </Text>
+          </View>
+          <Text style={styles.cardData}>{formatarDataHora(alerta.dataCriacao)}</Text>
+        </View>
+        <View style={[styles.selo, { backgroundColor: severidade.tinta }]}>
+          <Text style={[styles.seloTexto, { color: severidade.cor }]}>
+            {severidade.label}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.cardMensagem}>{alerta.mensagem}</Text>
+
+      {!alerta.lida && (
+        <>
+          <View style={styles.separador} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={aoMarcarLido}
+            style={({ pressed }) => [
+              styles.botaoLido,
+              pressed && styles.pressionado,
+            ]}
+          >
+            <Ionicons name="checkmark" size={16} color={colors.brand} />
+            <Text style={styles.botaoLidoTexto}>Marcar como lido</Text>
+          </Pressable>
+        </>
+      )}
+    </View>
+  );
+}
+
+// ----- helpers -----
+
+const formatarDataHora = (dataIso: string): string => {
+  const data = new Date(dataIso);
+  return `${data.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  })} as ${data.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
+
+// ----- estilos -----
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F5F5" },
-  centro: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: { flex: 1, backgroundColor: colors.background },
+
   botaoVerificar: {
-    backgroundColor: "#2E7D32",
-    margin: 12,
-    padding: 14,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
     alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
   },
-  botaoVerificarTexto: { color: "#FFF", fontWeight: "bold", fontSize: 15 },
+  pressionado: { opacity: 0.6 },
+
+  listaConteudo: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+  listaVazia: { flexGrow: 1, justifyContent: "center" },
+
   card: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    elevation: 2,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing.lg,
+    ...shadow.card,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  icone: { fontSize: 24, marginRight: 10 },
-  tipo: { fontSize: 16, fontWeight: "bold" },
-  data: { fontSize: 11, color: "#999", marginTop: 2 },
-  severidade: {
+  cardLido: { opacity: 0.55 },
+  cardTopo: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  cardIcone: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardCabecalho: { flex: 1 },
+  cardTituloLinha: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pontoNaoLido: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.brand,
+  },
+  cardTitulo: { fontSize: 16, fontWeight: "600", color: colors.ink },
+  cardData: { fontSize: 13, color: colors.inkTertiary, marginTop: 1 },
+  selo: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: radius.pill,
   },
-  severidadeTexto: { color: "#FFF", fontSize: 11, fontWeight: "bold" },
-  mensagem: { color: "#555", lineHeight: 20, marginBottom: 8 },
-  propriedade: { fontSize: 12, color: "#999", marginBottom: 10 },
-  botaoLida: {
-    borderWidth: 1,
-    borderColor: "#2E7D32",
-    borderRadius: 8,
-    padding: 8,
+  seloTexto: { fontSize: 12, fontWeight: "700" },
+
+  cardMensagem: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.inkSecondary,
+    marginTop: spacing.md,
+  },
+
+  separador: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.separator,
+    marginTop: spacing.md,
+  },
+  botaoLido: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingTop: spacing.md,
+    minHeight: 44,
   },
-  botaoLidaTexto: { color: "#2E7D32", fontWeight: "600", fontSize: 13 },
-  vazio: { alignItems: "center", marginTop: 60 },
-  vazioIcone: { fontSize: 40 },
-  vazioTexto: { fontSize: 16, color: "#999", marginTop: 8 },
+  botaoLidoTexto: { fontSize: 15, fontWeight: "600", color: colors.brand },
+
+  vazio: { alignItems: "center", paddingHorizontal: spacing.xxl },
+  vazioIcone: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.brandTint,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.lg,
+  },
+  vazioTitulo: { fontSize: 17, fontWeight: "600", color: colors.ink },
+  vazioTexto: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.inkSecondary,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+
+  esqueleto: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.card,
+  },
 });
