@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
+import PerfilSheet from "./PerfilSheet";
 import { colors, radius, shadow } from "../theme";
 import { useAlertas } from "../context/AlertasContext";
+import { useSession } from "../context/SessionContext";
 
 const TAB_ICONS: Record<
   string,
@@ -28,6 +30,8 @@ export default function FloatingTabBar({
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { naoLidos } = useAlertas();
+  const { produtor } = useSession();
+  const [perfilAberto, setPerfilAberto] = useState(false);
 
   return (
     <View
@@ -87,8 +91,30 @@ export default function FloatingTabBar({
           );
         })}
       </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Abrir perfil"
+        onPress={() => {
+          Haptics.selectionAsync();
+          setPerfilAberto(true);
+        }}
+        style={({ pressed }) => [styles.perfil, pressed && styles.perfilPressionado]}
+      >
+        <Text style={styles.perfilIniciais}>{iniciaisDoNome(produtor?.nome)}</Text>
+      </Pressable>
+
+      <PerfilSheet visivel={perfilAberto} aoFechar={() => setPerfilAberto(false)} />
     </View>
   );
+}
+
+function iniciaisDoNome(nome?: string): string {
+  if (!nome) return "?";
+  const partes = nome.trim().split(/\s+/);
+  const primeira = partes[0]?.charAt(0) ?? "";
+  const ultima = partes.length > 1 ? partes[partes.length - 1].charAt(0) : "";
+  return `${primeira}${ultima}`.toUpperCase();
 }
 
 const styles = StyleSheet.create({
@@ -96,7 +122,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: 8,
   },
   pill: {
     flexDirection: "row",
@@ -138,6 +167,23 @@ const styles = StyleSheet.create({
     color: colors.iconMuted,
   },
   labelActive: {
+    color: colors.brand,
+  },
+  perfil: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.floating,
+  },
+  perfilPressionado: {
+    backgroundColor: colors.brandTint,
+  },
+  perfilIniciais: {
+    fontSize: 16,
+    fontWeight: "700",
     color: colors.brand,
   },
 });

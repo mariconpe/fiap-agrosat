@@ -1,26 +1,34 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
+import { listarPropriedades } from "../services/api";
 import { useSession } from "../context/SessionContext";
 import type { Propriedade } from "../types";
 import { colors, radius, spacing } from "../theme";
 
 /**
  * Sheet de perfil do produtor: dados da conta, propriedade vinculada
- * e saída da sessão. Aberto pelo avatar no cabeçalho da Lavoura.
+ * e saída da sessão. Aberto pelo botão de perfil da tab bar e pelo
+ * avatar do cabeçalho da Lavoura.
  */
 export default function PerfilSheet({
   visivel,
   aoFechar,
-  propriedade,
 }: {
   visivel: boolean;
   aoFechar: () => void;
-  propriedade: Propriedade | null;
 }) {
   const { produtor, sair } = useSession();
+  const [propriedade, setPropriedade] = useState<Propriedade | null>(null);
+
+  useEffect(() => {
+    if (!visivel || propriedade != null) return;
+    listarPropriedades().then((propriedades) => {
+      if (propriedades.length > 0) setPropriedade(propriedades[0]);
+    });
+  }, [visivel, propriedade]);
 
   function sairDaConta() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

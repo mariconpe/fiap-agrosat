@@ -88,6 +88,13 @@ export default function DashboardScreen() {
     setInsightAtivo(insight);
   }
 
+  // a rota NdviHistorico vive no stack raiz, acima do tab navigator —
+  // despacha no pai para a ação não se perder no navigator de tabs
+  function abrirHistoricoNdvi() {
+    const stackRaiz = navigation.getParent() ?? navigation;
+    stackRaiz.navigate("NdviHistorico");
+  }
+
   if (carregando) {
     return <DashboardSkeleton paddingTop={insets.top + 12} />;
   }
@@ -177,7 +184,7 @@ export default function DashboardScreen() {
             accessibilityLabel="Abrir histórico de NDVI"
             onPress={() => {
               Haptics.selectionAsync();
-              navigation.navigate("NdviHistorico");
+              abrirHistoricoNdvi();
             }}
             style={({ pressed }) => [styles.chipGrande, pressed && styles.pressionado]}
           >
@@ -289,7 +296,7 @@ export default function DashboardScreen() {
                 rotulo: "Ver histórico completo",
                 aoTocar: () => {
                   setInsightAtivo(null);
-                  navigation.navigate("NdviHistorico");
+                  abrirHistoricoNdvi();
                 },
               },
             })
@@ -297,11 +304,7 @@ export default function DashboardScreen() {
         />
       </ScrollView>
 
-      <PerfilSheet
-        visivel={perfilAberto}
-        aoFechar={() => setPerfilAberto(false)}
-        propriedade={propriedade}
-      />
+      <PerfilSheet visivel={perfilAberto} aoFechar={() => setPerfilAberto(false)} />
 
       <InsightSheet insight={insightAtivo} aoFechar={() => setInsightAtivo(null)}>
         {insightAtivo?.titulo === "Umidade do solo" && (
