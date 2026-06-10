@@ -50,7 +50,7 @@ run TC02 "Login com senha incorreta" POST /api/auth/login \
     '{"email":"joao@agrosat.com.br","senha":"errada"}' 401
 
 run TC03 "Cadastro com email já existente" POST /api/produtores \
-    '{"nome":"João","email":"joao@agrosat.com.br","telefone":"(14) 90000-0000","senha":"123456"}' 400
+    '{"nome":"Joao","email":"joao@agrosat.com.br","telefone":"(14) 90000-0000","senha":"123456"}' 400
 
 run TC04 "Registrar leitura de sensor IoT válida" POST /api/sensores/dados \
     '{"tipo":"UMIDADE_SOLO","valor":18.5,"propriedadeId":1}' 201
