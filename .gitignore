@@ -28,3 +28,4 @@ mobile/dist/
 
 # Agent (notas de sessão)
 .agent/
+*.swp
