@@ -1,7 +1,7 @@
 // Serviço de API — conecta no backend Spring Boot
 // Se a API não estiver disponível, usa dados mockados para demo
 
-import type { Propriedade, NdviResponse, Alerta, Sensor } from "../types";
+import type { Propriedade, NdviResponse, Alerta, Sensor, Produtor } from "../types";
 
 const BASE_URL = "http://localhost:8080/api";
 
@@ -107,6 +107,11 @@ export async function verificarRiscos(
   );
 }
 
+export async function marcarAlertaComoLida(alertaId: number): Promise<Alerta> {
+  const mock = { ...MOCK_ALERTAS[0], id: alertaId, lida: true };
+  return fetchOrMock(`/alertas/${alertaId}/lida`, mock, { method: "PUT" });
+}
+
 // ---------------------------------------------------------------
 // Sensores
 // ---------------------------------------------------------------
@@ -142,4 +147,60 @@ export async function listarSensores(
     `/sensores?propriedadeId=${propriedadeId}`,
     MOCK_SENSORES
   );
+}
+
+// ---------------------------------------------------------------
+// Autenticação
+// ---------------------------------------------------------------
+
+const MOCK_PRODUTOR_EMAIL = "joao@agrosat.com.br";
+const MOCK_PRODUTOR_SENHA = "123456";
+
+const MOCK_PRODUTOR: Produtor = {
+  produtorId: 1,
+  nome: "João da Silva",
+  email: MOCK_PRODUTOR_EMAIL,
+};
+
+/**
+ * Autentica o produtor.
+ * - Tenta POST /auth/login no backend.
+ * - Se a rede estiver indisponível, aplica fallback mock APENAS para
+ *   joao@agrosat.com.br / 123456 — credenciais erradas lançam mesmo offline.
+ * - 401 do servidor lança erro (não cai no mock).
+ */
+export async function login(email: string, senha: string): Promise<Produtor> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, senha }),
+    });
+
+    if (res.status === 401) {
+      throw new Error("credenciais_invalidas");
+    }
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    return await res.json() as Produtor;
+  } catch (err) {
+    const isNetworkError =
+      err instanceof TypeError ||
+      (err instanceof Error && err.message.startsWith("HTTP ") === false && err.message !== "credenciais_invalidas");
+
+    if (!isNetworkError) {
+      throw err;
+    }
+
+    // Fallback mock apenas para a conta de demonstração
+    if (email === MOCK_PRODUTOR_EMAIL && senha === MOCK_PRODUTOR_SENHA) {
+      console.log("[mock] login aceito com conta de demonstração");
+      return { ...MOCK_PRODUTOR };
+    }
+
+    throw new Error("credenciais_invalidas");
+  }
 }
