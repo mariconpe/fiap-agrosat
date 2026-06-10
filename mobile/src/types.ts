@@ -1,5 +1,11 @@
 // Tipos usados nas telas do AgroSat
 
+export interface Produtor {
+  produtorId: number;
+  nome: string;
+  email: string;
+}
+
 export interface Propriedade {
   id: number;
   nome: string;

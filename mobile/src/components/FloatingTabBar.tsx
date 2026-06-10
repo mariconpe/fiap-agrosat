@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 import { colors, radius, shadow } from "../theme";
+import { useAlertas } from "../context/AlertasContext";
 
 const TAB_ICONS: Record<
   string,
@@ -26,6 +27,7 @@ export default function FloatingTabBar({
   navigation,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { naoLidos } = useAlertas();
 
   return (
     <View
@@ -41,6 +43,7 @@ export default function FloatingTabBar({
             active: "ellipse",
             inactive: "ellipse-outline",
           };
+          const hasUnread = route.name === "Alertas" && naoLidos > 0;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -59,7 +62,9 @@ export default function FloatingTabBar({
               key={route.key}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
-              accessibilityLabel={label}
+              accessibilityLabel={
+                hasUnread ? `${label}, ${naoLidos} não lidos` : label
+              }
               onPress={onPress}
               style={({ pressed }) => [
                 styles.item,
@@ -67,11 +72,14 @@ export default function FloatingTabBar({
                 pressed && !isActive && styles.itemPressed,
               ]}
             >
-              <Ionicons
-                name={isActive ? icons.active : icons.inactive}
-                size={22}
-                color={isActive ? colors.brand : colors.iconMuted}
-              />
+              <View style={styles.iconeContainer}>
+                <Ionicons
+                  name={isActive ? icons.active : icons.inactive}
+                  size={22}
+                  color={isActive ? colors.brand : colors.iconMuted}
+                />
+                {hasUnread && <View style={styles.badgeDot} />}
+              </View>
               <Text style={[styles.label, isActive && styles.labelActive]}>
                 {label}
               </Text>
@@ -111,6 +119,18 @@ const styles = StyleSheet.create({
   },
   itemPressed: {
     backgroundColor: colors.background,
+  },
+  iconeContainer: {
+    position: "relative",
+  },
+  badgeDot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.critical,
   },
   label: {
     fontSize: 11,

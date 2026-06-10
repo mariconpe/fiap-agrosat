@@ -15,6 +15,7 @@ import { listarAlertas, marcarAlertaComoLida, verificarRiscos } from "../service
 import type { Alerta } from "../types";
 import ScreenHeader from "../components/ScreenHeader";
 import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
+import { useAlertas } from "../context/AlertasContext";
 
 const PROPRIEDADE_ID = 1;
 
@@ -29,34 +30,47 @@ export default function AlertasScreen() {
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
   const [verificando, setVerificando] = useState(false);
+  const { setNaoLidos } = useAlertas();
+
+  const atualizarNaoLidos = useCallback(
+    (lista: Alerta[]) => {
+      setNaoLidos(lista.filter((a) => !a.lida).length);
+    },
+    [setNaoLidos]
+  );
 
   const carregarAlertas = useCallback(async () => {
-    setAlertas(await listarAlertas(PROPRIEDADE_ID));
+    const dados = await listarAlertas(PROPRIEDADE_ID);
+    setAlertas(dados);
+    atualizarNaoLidos(dados);
     setCarregando(false);
     setRecarregando(false);
-  }, []);
+  }, [atualizarNaoLidos]);
 
   useEffect(() => {
     carregarAlertas();
   }, [carregarAlertas]);
 
-  async function executarVerificacao() {
+  const executarVerificacao = async () => {
     setVerificando(true);
     const resultado = await verificarRiscos(PROPRIEDADE_ID);
     setAlertas(resultado.alertas);
+    atualizarNaoLidos(resultado.alertas);
     setVerificando(false);
     Haptics.notificationAsync(
       resultado.alertas.some((alerta) => !alerta.lida)
         ? Haptics.NotificationFeedbackType.Warning
         : Haptics.NotificationFeedbackType.Success
     );
-  }
+  };
 
   async function marcarComoLido(alerta: Alerta) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setAlertas((atuais) =>
-      atuais.map((a) => (a.id === alerta.id ? { ...a, lida: true } : a))
+    const atualizados = alertas.map((a) =>
+      a.id === alerta.id ? { ...a, lida: true } : a
     );
+    setAlertas(atualizados);
+    atualizarNaoLidos(atualizados);
     await marcarAlertaComoLida(alerta.id);
   }
 
