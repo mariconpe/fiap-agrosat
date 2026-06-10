@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 import { listarAlertas, marcarAlertaComoLida, verificarRiscos } from "../services/api";
 import type { Alerta } from "../types";
@@ -44,9 +45,15 @@ export default function AlertasScreen() {
     const resultado = await verificarRiscos(PROPRIEDADE_ID);
     setAlertas(resultado.alertas);
     setVerificando(false);
+    Haptics.notificationAsync(
+      resultado.alertas.some((alerta) => !alerta.lida)
+        ? Haptics.NotificationFeedbackType.Warning
+        : Haptics.NotificationFeedbackType.Success
+    );
   }
 
   async function marcarComoLido(alerta: Alerta) {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setAlertas((atuais) =>
       atuais.map((a) => (a.id === alerta.id ? { ...a, lida: true } : a))
     );
@@ -104,6 +111,7 @@ export default function AlertasScreen() {
           refreshControl={
             <RefreshControl
               refreshing={recarregando}
+              tintColor={colors.brand}
               onRefresh={() => {
                 setRecarregando(true);
                 carregarAlertas();
@@ -167,6 +175,15 @@ function CartaoAlerta({
       </View>
 
       <Text style={styles.cardMensagem}>{alerta.mensagem}</Text>
+
+      <View style={styles.recomendacao}>
+        <Ionicons name="bulb" size={14} color={colors.brand} />
+        <Text style={styles.recomendacaoTexto}>
+          {isSeca
+            ? "Priorize a irrigação e adie aplicações que dependem de solo úmido."
+            : "Faça inspeção de campo nas áreas com queda de vigor antes de aplicar defensivo."}
+        </Text>
+      </View>
 
       {!alerta.lida && (
         <>
@@ -254,6 +271,23 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.inkSecondary,
     marginTop: spacing.md,
+  },
+
+  recomendacao: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    backgroundColor: colors.brandTint,
+    borderRadius: radius.control,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  recomendacaoTexto: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.brand,
+    fontWeight: "500",
   },
 
   separador: {

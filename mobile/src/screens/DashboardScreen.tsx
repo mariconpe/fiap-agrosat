@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -19,6 +21,7 @@ import { consultarNdvi, listarPropriedades, listarSensores } from "../services/a
 import type { NdviResponse, Propriedade, Sensor } from "../types";
 import ScreenHeader from "../components/ScreenHeader";
 import SectionHeader from "../components/SectionHeader";
+import { useReducedMotion } from "../hooks/use-reduced-motion";
 import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
 
 const STATUS_NDVI = {
@@ -37,6 +40,7 @@ export default function DashboardScreen() {
   const [propriedade, setPropriedade] = useState<Propriedade | null>(null);
   const [ndvi, setNdvi] = useState<NdviResponse | null>(null);
   const [umidadeSerie, setUmidadeSerie] = useState<number[]>([]);
+  const [horaAtualizacao, setHoraAtualizacao] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
 
@@ -52,6 +56,9 @@ export default function DashboardScreen() {
       setNdvi(ndviData);
       setUmidadeSerie(extrairSerieUmidade(sensores));
     }
+    setHoraAtualizacao(
+      new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    );
     setCarregando(false);
     setRecarregando(false);
   }, []);
@@ -77,6 +84,7 @@ export default function DashboardScreen() {
       refreshControl={
         <RefreshControl
           refreshing={recarregando}
+          tintColor={colors.brand}
           onRefresh={() => {
             setRecarregando(true);
             carregarDados();
@@ -110,8 +118,10 @@ export default function DashboardScreen() {
 
         <View style={styles.heroChips} pointerEvents="none">
           <View style={styles.chip}>
-            <View style={styles.pontoOnline} />
-            <Text style={styles.chipTexto}>Monitorando agora</Text>
+            <PontoPulsante />
+            <Text style={styles.chipTexto}>
+              Monitorando{horaAtualizacao ? ` · ${horaAtualizacao}` : ""}
+            </Text>
           </View>
         </View>
 
@@ -129,6 +139,12 @@ export default function DashboardScreen() {
             </Text>
           </View>
         </View>
+      </View>
+
+      <View style={styles.legenda}>
+        <ItemLegenda cor="#3DA15A" rotulo="Saudável" />
+        <ItemLegenda cor="#D9AE3B" rotulo="Atenção" />
+        <ItemLegenda cor="#CB6B3F" rotulo="Estresse" />
       </View>
 
       <Text style={styles.heroNota}>
@@ -245,6 +261,44 @@ export default function DashboardScreen() {
 
 // ----- componentes auxiliares -----
 
+function PontoPulsante() {
+  const isReducedMotion = useReducedMotion();
+  const opacidade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isReducedMotion) return;
+    const pulso = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacidade, {
+          toValue: 0.25,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacidade, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulso.start();
+    return () => pulso.stop();
+  }, [isReducedMotion, opacidade]);
+
+  return <Animated.View style={[styles.pontoOnline, { opacity: opacidade }]} />;
+}
+
+function ItemLegenda({ cor, rotulo }: { cor: string; rotulo: string }) {
+  return (
+    <View style={styles.legendaItem}>
+      <View style={[styles.legendaPonto, { backgroundColor: cor }]} />
+      <Text style={styles.legendaTexto}>{rotulo}</Text>
+    </View>
+  );
+}
+
 function CartaoHoje({
   titulo,
   valor,
@@ -271,6 +325,30 @@ function CartaoHoje({
 }
 
 function GraficoBarras({ valores, cor }: { valores: number[]; cor: string }) {
+  const isReducedMotion = useReducedMotion();
+  const entrada = useRef(
+    valores.map(() => new Animated.Value(0))
+  ).current;
+
+  useEffect(() => {
+    if (valores.length === 0) return;
+    if (isReducedMotion) {
+      entrada.forEach((valor) => valor.setValue(1));
+      return;
+    }
+    Animated.stagger(
+      60,
+      entrada.map((valor) =>
+        Animated.timing(valor, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        })
+      )
+    ).start();
+  }, [entrada, isReducedMotion, valores.length]);
+
   if (valores.length === 0) return null;
   const maximo = Math.max(...valores, 1);
 
@@ -278,15 +356,29 @@ function GraficoBarras({ valores, cor }: { valores: number[]; cor: string }) {
     <View style={styles.grafico}>
       {valores.map((valor, indice) => {
         const isUltima = indice === valores.length - 1;
+        const opacidadeFinal = isUltima
+          ? 1
+          : 0.25 + (indice / valores.length) * 0.35;
         return (
-          <View
+          <Animated.View
             key={indice}
             style={[
               styles.graficoBarra,
               {
                 height: `${Math.max((valor / maximo) * 100, 12)}%`,
                 backgroundColor: cor,
-                opacity: isUltima ? 1 : 0.25 + (indice / valores.length) * 0.35,
+                opacity: entrada[indice].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, opacidadeFinal],
+                }),
+                transform: [
+                  {
+                    translateY: entrada[indice].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [6, 0],
+                    }),
+                  },
+                ],
               },
             ]}
           />
@@ -317,8 +409,38 @@ function LinhaInfo({
 }
 
 function DashboardSkeleton({ paddingTop }: { paddingTop: number }) {
+  const isReducedMotion = useReducedMotion();
+  const brilho = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isReducedMotion) return;
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(brilho, {
+          toValue: 0.55,
+          duration: 700,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(brilho, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [brilho, isReducedMotion]);
+
   return (
-    <View style={[styles.container, { paddingTop, paddingHorizontal: spacing.lg }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        { paddingTop, paddingHorizontal: spacing.lg, opacity: brilho },
+      ]}
+    >
       <View style={[styles.esqueleto, { width: "55%", height: 30, marginTop: 20 }]} />
       <View style={[styles.esqueleto, { width: "35%", height: 16, marginTop: 8 }]} />
       <View style={[styles.esqueleto, { height: 190, marginTop: 24 }]} />
@@ -326,7 +448,7 @@ function DashboardSkeleton({ paddingTop }: { paddingTop: number }) {
         <View style={[styles.esqueleto, { flex: 1, height: 150 }]} />
         <View style={[styles.esqueleto, { flex: 1, height: 150 }]} />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -465,6 +587,16 @@ const styles = StyleSheet.create({
   },
   chipGrandeTexto: { fontSize: 14, color: colors.inkSecondary },
   chipGrandeValor: { fontWeight: "700", color: colors.ink },
+
+  legenda: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  legendaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendaPonto: { width: 8, height: 8, borderRadius: 4 },
+  legendaTexto: { fontSize: 12, color: colors.inkSecondary },
 
   heroNota: {
     fontSize: 13,

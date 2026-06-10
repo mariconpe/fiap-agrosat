@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 import { listarSensores } from "../services/api";
 import type { Sensor } from "../types";
@@ -77,6 +79,23 @@ export default function SensoresScreen() {
       <ScreenHeader
         titulo="Sensores"
         subtitulo="Dispositivos IoT instalados na propriedade"
+        acessorio={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Atualizar leituras"
+            onPress={() => {
+              Haptics.selectionAsync();
+              setRecarregando(true);
+              carregarSensores();
+            }}
+            style={({ pressed }) => [
+              styles.botaoAtualizar,
+              pressed && styles.pressionado,
+            ]}
+          >
+            <Ionicons name="refresh" size={20} color={colors.brand} />
+          </Pressable>
+        }
       />
 
       {carregando ? (
@@ -98,6 +117,7 @@ export default function SensoresScreen() {
           refreshControl={
             <RefreshControl
               refreshing={recarregando}
+              tintColor={colors.brand}
               onRefresh={() => {
                 setRecarregando(true);
                 carregarSensores();
@@ -191,6 +211,17 @@ function formatarDataHora(dataIso: string): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+
+  botaoAtualizar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
+  },
+  pressionado: { opacity: 0.6 },
 
   listaConteudo: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   listaVazia: { flexGrow: 1, justifyContent: "center" },

@@ -1,6 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
@@ -48,6 +49,7 @@ export default function FloatingTabBar({
               canPreventDefault: true,
             });
             if (!isActive && !event.defaultPrevented) {
+              Haptics.selectionAsync();
               navigation.navigate(route.name);
             }
           };
