@@ -19,8 +19,8 @@ Pré-requisito: aplicação rodando em `http://localhost:8080` com o seed carreg
 ## Execução
 
 O script `run_tests.sh` executa os 5 casos, compara o status HTTP recebido com o
-esperado e grava o resultado em `evidencias.log` (essa é a evidência de execução
-exigida no desafio).
+esperado e grava o resultado em `evidencias_testes.log` (essa é a evidência de
+execução exigida no desafio).
 
 ```bash
 # com a aplicação rodando em outro terminal (mvn spring-boot:run)
@@ -29,8 +29,9 @@ bash run_tests.sh
 ```
 
 Saída esperada (resumo): `TC01 PASS / TC02 PASS / TC03 PASS / TC04 PASS / TC05 PASS`.
-O arquivo `evidencias.log` guarda o request, o status e o corpo de cada resposta
-para anexar ao PDF (print ou cópia do log).
+O arquivo `evidencias_testes.log` (em `testes/evidencias_testes.log`) guarda o
+request, o status e o corpo de cada resposta — é a evidência de execução para
+anexar ao PDF.
 
 ## Observações
 
