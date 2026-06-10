@@ -7,20 +7,73 @@ produtores rurais.
 
 ## Stack
 
-- Java 17
-- Spring Boot 3.3.5
-- Spring Data JPA / Hibernate
-- H2 (dev) / PostgreSQL (prod)
-- Swagger / OpenAPI 3
+- **Backend:** Java 17, Spring Boot 3.3.5, Spring Data JPA / Hibernate
+- **Banco:** H2 (dev) / PostgreSQL (prod) — scripts SQL em [`banco/`](banco/)
+- **Docs da API:** Swagger / OpenAPI 3
+- **Mobile:** React Native + TypeScript (Expo SDK 54)
+- **IoT:** simulador em Python 3 (stdlib)
 
-## Como rodar
+## Como rodar (passo a passo)
+
+**Pré-requisitos:** Java 17+, Maven, Node.js 20+, Python 3 e, para ver o app
+no celular, o [Expo Go](https://expo.dev/go) instalado. Clone o repositório e
+siga na ordem — passos 1, 3 e 4 ficam cada um em um terminal próprio.
+
+### 1. Subir a API
 
 ```bash
-# precisa de Java 17+ e Maven
 mvn spring-boot:run
 ```
 
-Acessar: http://localhost:8080/swagger-ui/index.html
+Sobe em `http://localhost:8080` com banco H2 em memória já populado
+(seção "Dados de seed" abaixo). Para conferir:
+
+- Swagger: http://localhost:8080/swagger-ui/index.html
+- H2 Console: http://localhost:8080/h2-console (JDBC `jdbc:h2:mem:agrosat`, user `sa`, sem senha)
+
+### 2. Rodar os testes
+
+```bash
+mvn test
+```
+
+8 testes de integração (JUnit 5 + MockMvc). Plano em
+[docs/plano-de-testes.md](docs/plano-de-testes.md), evidências em
+[docs/evidencias-testes.md](docs/evidencias-testes.md) e smoke tests via
+curl em [`testes/`](testes/).
+
+### 3. Simulador IoT
+
+Com a API no ar, em outro terminal:
+
+```bash
+python3 iot/simulador.py
+```
+
+Envia 10 leituras de umidade do solo para `POST /api/sensores/dados`,
+alimentando a regra de seca e a tela de Sensores do app. Detalhes em
+[iot/README.md](iot/README.md).
+
+### 4. App mobile
+
+```bash
+cd mobile
+npm install
+npx expo start
+# escanear o QR code com o Expo Go (celular no mesmo Wi-Fi)
+# ou: npm run web — abre no navegador, jeito mais rápido de ver funcionando
+```
+
+Fluxo do app: **login** (conta demo abaixo) → **Lavoura** (mapa de satélite
+com o talhão tingido pelo status NDVI + carrossel de métricas com detalhes ao
+toque) → **Alertas** (riscos de seca/praga com recomendação de ação e badge de
+não lidos) → **Sensores** (leituras IoT) → **histórico NDVI** e **perfil** com
+logout pela tab bar.
+
+O app consome a API em `http://localhost:8080`; sem a API no ar, usa dados
+mockados equivalentes ao seed — o login demo funciona nos dois casos.
+Instruções completas (Android/iOS, conexão com o backend, versões) em
+[`mobile/README.md`](mobile/README.md).
 
 ### Dados de seed
 
@@ -57,24 +110,18 @@ src/main/java/br/com/fiap/agrosat/
 | `POST` | `/api/sensores/dados` | Registrar leitura IoT |
 | `POST` | `/api/alertas/verificar` | Rodar engine de risco |
 
-## Documentação
-
-- [Documento de concepção](docs/concepcao.md)
-- [Segurança (login + práticas + JWT projetado)](docs/seguranca.md)
-
 ## Banco de dados
 
 Scripts em [`banco/`](banco/): `schema.sql` (CREATE TABLE com PK/FK no dialeto H2),
 `seed.sql` (dados de demonstração) e `consultas.sql` (3 consultas de exemplo).
-Em execução, o banco também pode ser inspecionado no H2 Console em
-http://localhost:8080/h2-console (JDBC URL `jdbc:h2:mem:agrosat`, user `sa`, sem senha).
 
 ## Segurança
 
-Login com senha criptografada em `POST /api/auth/login` (compara hash SHA-256,
-nunca a senha em texto puro). Práticas aplicadas: validação de entrada (Bean
-Validation), criptografia de senha, proteção contra SQL Injection (consultas
-parametrizadas do JPA) e CORS controlado. Detalhes em [`docs/seguranca.md`](docs/seguranca.md).
+Login com senha criptografada em `POST /api/auth/login` (compara hash SHA-256
+em tempo constante, nunca a senha em texto puro). Práticas aplicadas: validação
+de entrada (Bean Validation), criptografia de senha, proteção contra SQL
+Injection (consultas parametrizadas do JPA) e CORS controlado. Detalhes em
+[`docs/seguranca.md`](docs/seguranca.md).
 
 ```bash
 # testar login (após subir a aplicação)
@@ -83,31 +130,10 @@ curl -i -X POST http://localhost:8080/api/auth/login \
   -d '{"email":"joao@agrosat.com.br","senha":"123456"}'   # 200
 ```
 
-## App Mobile
+## Documentação
 
-App React Native + Expo (SDK 54) em [`mobile/`](mobile/), com 3 telas:
-Dashboard (NDVI), Alertas (seca/praga) e Sensores (IoT). Consome a API quando
-ela está no ar e cai em dados mockados de demonstração quando não está.
-
-```bash
-cd mobile
-npm install
-npm run web      # abre no navegador (jeito mais rápido de ver funcionando)
-npm start        # gera QR code para abrir no Expo Go do celular
-```
-
-Instruções completas (Android/iOS, conexão com o backend, versões) em
-[`mobile/README.md`](mobile/README.md).
-
-## Simulação IoT
-
-Sensor simulado de umidade do solo em [`iot/`](iot/). Envia leituras para
-`POST /api/sensores/dados`, alimentando a regra de seca.
-
-```bash
-pip install requests
-python iot/simulador_sensor.py --leituras 10
-```
+- [Documento de concepção](docs/concepcao.md)
+- [Segurança (login + práticas + JWT projetado)](docs/seguranca.md)
 
 ## Equipe
 

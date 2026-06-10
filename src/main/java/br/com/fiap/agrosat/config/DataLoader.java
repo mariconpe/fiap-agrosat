@@ -4,17 +4,15 @@ import br.com.fiap.agrosat.model.*;
 import br.com.fiap.agrosat.model.enums.TipoDadoSatelite;
 import br.com.fiap.agrosat.model.enums.TipoSensor;
 import br.com.fiap.agrosat.repository.*;
+import br.com.fiap.agrosat.service.SenhaHash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 
 import java.math.BigDecimal;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HexFormat;
 
 /**
  * Popula o banco H2 com dados de demonstração ao iniciar a aplicação.
@@ -56,7 +54,7 @@ public class DataLoader implements CommandLineRunner {
                 "João da Silva",
                 "joao@agrosat.com.br",
                 "(14) 99999-0001",
-                hash("123456")
+                SenhaHash.gerar("123456")
         ));
 
         // ── Culturas ──
@@ -127,15 +125,5 @@ public class DataLoader implements CommandLineRunner {
                 hoje, fazenda));
 
         log.info("Seed concluído — produtor: joao@agrosat.com.br / senha: 123456");
-    }
-
-    private String hash(String senha) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(senha.getBytes());
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

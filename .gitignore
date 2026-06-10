@@ -22,3 +22,7 @@ Thumbs.db
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+
+# Agent (notas de sessão)
+.agent/
+*.swp

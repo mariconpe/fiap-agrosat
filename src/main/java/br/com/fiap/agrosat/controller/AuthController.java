@@ -1,12 +1,11 @@
 package br.com.fiap.agrosat.controller;
 
 import br.com.fiap.agrosat.dto.LoginRequest;
-import br.com.fiap.agrosat.dto.ProdutorResponse;
-import br.com.fiap.agrosat.service.ProdutorService;
+import br.com.fiap.agrosat.dto.LoginResponse;
+import br.com.fiap.agrosat.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,17 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Autenticação")
 public class AuthController {
 
-    private final ProdutorService service;
+    private final AuthService service;
 
-    public AuthController(ProdutorService service) {
+    public AuthController(AuthService service) {
         this.service = service;
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login do produtor (senha verificada por hash SHA-256)")
-    public ResponseEntity<ProdutorResponse> login(@Valid @RequestBody LoginRequest request) {
-        return service.autenticar(request.getEmail(), request.getSenha())
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    @Operation(summary = "Autenticar produtor com email e senha")
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(service.autenticar(request));
     }
 }

@@ -1,5 +1,6 @@
 package br.com.fiap.agrosat.config;
 
+import br.com.fiap.agrosat.service.CredenciaisInvalidasException;
 import br.com.fiap.agrosat.service.RecursoNaoEncontradoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -17,6 +18,14 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(
                 HttpStatus.NOT_FOUND, ex.getMessage());
         pd.setTitle("Recurso não encontrado");
+        return pd;
+    }
+
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    public ProblemDetail handleUnauthorized(CredenciaisInvalidasException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED, ex.getMessage());
+        pd.setTitle("Não autorizado");
         return pd;
     }
 

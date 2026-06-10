@@ -1,52 +1,71 @@
-# Simulação IoT - AgroSat
+# 📡 AgroSat — Simulação de IoT
 
-Sensor simulado de umidade do solo. Envia leituras para `POST /api/sensores/dados`
-com valores variando gradualmente entre 15% e 35%, conforme a concepção.
+> Global Solution 2026/1 — Parte 6: Simulação ou Integração de IoT
 
-## Pré-requisito
+## Qual sensor é simulado
+
+Sensor de **umidade do solo** instalado na propriedade rural (simulando um
+sensor capacitivo de campo). É o dispositivo IoT mais relevante para o pequeno
+produtor: barato, de fácil instalação e essencial para detectar estresse
+hídrico da lavoura.
+
+## O que ele mede
+
+Percentual de umidade volumétrica do solo, na faixa de **15% a 35%**,
+com variação gradual entre leituras (random walk), imitando o comportamento
+real do solo ao longo do dia.
+
+## Como influencia o sistema
+
+1. Cada leitura é enviada para a API via `POST /api/sensores/dados` e
+   persistida vinculada à propriedade.
+2. O painel de **Sensores** do app mobile exibe a última leitura.
+3. A engine de risco (`POST /api/alertas/verificar`) cruza a umidade do
+   solo com a precipitação acumulada dos satélites: umidade **< 20%** com
+   chuva acumulada **< 10mm em 15 dias** dispara o **alerta de seca**,
+   que aparece na tela de Alertas do produtor. O dado do dispositivo IoT
+   vira decisão automática de alerta.
+
+## Como executar
+
+Com a API rodando (`mvn spring-boot:run`):
 
 ```bash
-pip install requests
+# 10 leituras, uma a cada 5 segundos (padrão)
+python3 iot/simulador.py
+
+# opções
+python3 iot/simulador.py --url http://localhost:8080 \
+    --propriedade 1 --intervalo 2 --leituras 20
 ```
 
-## Uso
-
-Com o backend rodando em `localhost:8080`:
-
-```bash
-# 10 leituras, uma a cada 5s, para a propriedade 1 (Fazenda Esperança do seed)
-python simulador_sensor.py --leituras 10
-
-# fluxo contínuo a cada 2s
-python simulador_sensor.py --intervalo 2
-
-# outra propriedade / outra URL
-python simulador_sensor.py --propriedade 1 --url http://localhost:8080/api/sensores/dados
-```
+Requer apenas Python 3 (sem dependências externas — usa `urllib` da stdlib).
 
 ## Contrato enviado
 
 O endpoint define a data/hora no servidor, então o corpo é apenas:
 
 ```json
-{ "tipo": "UMIDADE_SOLO", "valor": 18.42, "propriedadeId": 1 }
+{ "tipo": "UMIDADE_SOLO", "valor": 18.4, "propriedadeId": 1 }
 ```
 
-`tipo` aceita os valores do enum `TipoSensor`: `UMIDADE_SOLO`, `TEMPERATURA`, `PLUVIOMETRO`.
+`tipo` aceita os valores do enum `TipoSensor`: `UMIDADE_SOLO`, `TEMPERATURA`,
+`PLUVIOMETRO`.
 
 ## Verificando
 
-As leituras aparecem em `GET /api/sensores?propriedadeId=1`.
+As leituras aparecem em `GET /api/sensores?propriedadeId=1` e na tela de
+Sensores do app.
 
-## Explicação da lógica (qual sensor, o que mede, como influencia o sistema)
+## Exemplo de saída
 
-- **Sensor:** umidade do solo (`TipoSensor.UMIDADE_SOLO`), simulando um sensor
-  capacitivo de campo.
-- **O que mede:** percentual de umidade do solo, valores entre 15% e 35% com
-  variação gradual (passeio aleatório), como um sensor real ao longo do tempo.
-- **Como influencia o sistema:** cada leitura é persistida e alimenta a regra de
-  risco de seca do backend. Quando a última umidade fica abaixo de 20% e a
-  precipitação acumulada nos últimos 15 dias é menor que 10mm, o sistema gera um
-  `Alerta` de SECA (via `POST /api/alertas/verificar`), que aparece no painel de
-  monitoramento e na tela de alertas do app. Ou seja, o dado do dispositivo IoT
-  vira decisão automática de alerta para o produtor.
+```
+🛰️  Simulador AgroSat — sensor de umidade do solo
+    API: http://localhost:8080 | propriedade: 1 | 10 leituras a cada 5s
+
+[21:30:01] Leitura 1/10
+  ✅ Leitura registrada (id 4): umidade 23.4%
+[21:30:06] Leitura 2/10
+  ✅ Leitura registrada (id 5): umidade 22.1%
+...
+```
