@@ -6,10 +6,6 @@ import br.com.fiap.agrosat.model.Produtor;
 import br.com.fiap.agrosat.repository.ProdutorRepository;
 import org.springframework.stereotype.Service;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
-
 @Service
 public class ProdutorService {
 
@@ -28,7 +24,7 @@ public class ProdutorService {
                 request.getNome(),
                 request.getEmail(),
                 request.getTelefone(),
-                hashSenha(request.getSenha())
+                SenhaHash.gerar(request.getSenha())
         );
 
         Produtor salvo = repository.save(produtor);
@@ -39,15 +35,5 @@ public class ProdutorService {
         Produtor p = repository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Produtor", id));
         return ProdutorResponse.fromEntity(p);
-    }
-
-    private String hashSenha(String senha) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(senha.getBytes());
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Erro ao gerar hash da senha", e);
-        }
     }
 }
