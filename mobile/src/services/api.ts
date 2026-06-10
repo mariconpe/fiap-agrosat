@@ -107,6 +107,11 @@ export async function verificarRiscos(
   );
 }
 
+export async function marcarAlertaComoLida(alertaId: number): Promise<Alerta> {
+  const mock = { ...MOCK_ALERTAS[0], id: alertaId, lida: true };
+  return fetchOrMock(`/alertas/${alertaId}/lida`, mock, { method: "PUT" });
+}
+
 // ---------------------------------------------------------------
 // Sensores
 // ---------------------------------------------------------------
