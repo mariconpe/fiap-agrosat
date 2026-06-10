@@ -22,8 +22,10 @@ import {
 import { consultarNdvi, listarPropriedades, listarSensores } from "../services/api";
 import type { NdviResponse, Propriedade, Sensor } from "../types";
 import InsightSheet, { type InsightConteudo } from "../components/InsightSheet";
+import PerfilSheet from "../components/PerfilSheet";
 import ScreenHeader from "../components/ScreenHeader";
 import SectionHeader from "../components/SectionHeader";
+import { useSession } from "../context/SessionContext";
 import { useReducedMotion } from "../hooks/use-reduced-motion";
 import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
 
@@ -48,6 +50,8 @@ const TALHAO_PRINCIPAL = [
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const { produtor } = useSession();
+  const [perfilAberto, setPerfilAberto] = useState(false);
   const [propriedade, setPropriedade] = useState<Propriedade | null>(null);
   const [ndvi, setNdvi] = useState<NdviResponse | null>(null);
   const [umidadeSerie, setUmidadeSerie] = useState<number[]>([]);
@@ -110,15 +114,25 @@ export default function DashboardScreen() {
       }
     >
       <ScreenHeader
-        saudacao={`${saudacaoPorHora()}, João`}
+        saudacao={`${saudacaoPorHora()}, ${primeiroNome(produtor?.nome)}`}
         titulo={propriedade?.nome ?? "AgroSat"}
         subtitulo={`${propriedade?.cultura ?? "—"} · ${formatarArea(
           propriedade?.areaHectares
         )} ha`}
         acessorio={
-          <View style={styles.avatar}>
-            <Ionicons name="leaf" size={20} color={colors.brand} />
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Abrir perfil"
+            onPress={() => {
+              Haptics.selectionAsync();
+              setPerfilAberto(true);
+            }}
+            style={({ pressed }) => [styles.avatar, pressed && styles.pressionado]}
+          >
+            <Text style={styles.avatarIniciais}>
+              {iniciaisDoNome(produtor?.nome)}
+            </Text>
+          </Pressable>
         }
       />
 
@@ -282,6 +296,12 @@ export default function DashboardScreen() {
           }
         />
       </ScrollView>
+
+      <PerfilSheet
+        visivel={perfilAberto}
+        aoFechar={() => setPerfilAberto(false)}
+        propriedade={propriedade}
+      />
 
       <InsightSheet insight={insightAtivo} aoFechar={() => setInsightAtivo(null)}>
         {insightAtivo?.titulo === "Umidade do solo" && (
@@ -604,6 +624,18 @@ function extrairSerieUmidade(sensores: Sensor[]): number[] {
     .map((sensor) => sensor.valor);
 }
 
+function primeiroNome(nome?: string): string {
+  return nome?.trim().split(/\s+/)[0] ?? "produtor";
+}
+
+function iniciaisDoNome(nome?: string): string {
+  if (!nome) return "?";
+  const partes = nome.trim().split(/\s+/);
+  const primeira = partes[0]?.charAt(0) ?? "";
+  const ultima = partes.length > 1 ? partes[partes.length - 1].charAt(0) : "";
+  return `${primeira}${ultima}`.toUpperCase();
+}
+
 function saudacaoPorHora(): string {
   const hora = new Date().getHours();
   if (hora < 12) return "Bom dia";
@@ -643,6 +675,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarIniciais: { fontSize: 15, fontWeight: "700", color: colors.brand },
 
   heroCard: {
     height: 210,
