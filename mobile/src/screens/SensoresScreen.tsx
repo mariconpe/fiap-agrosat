@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { listarSensores } from "../services/api";
 import type { Sensor } from "../types";
 
@@ -95,7 +96,7 @@ export default function SensoresScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList
         data={sensores}
         keyExtractor={(s) => s.id.toString()}
@@ -123,7 +124,7 @@ export default function SensoresScreen() {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

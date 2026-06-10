@@ -7,10 +7,12 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarPropriedades, consultarNdvi } from "../services/api";
 import type { Propriedade, NdviResponse } from "../types";
 
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
   const [propriedade, setPropriedade] = useState<Propriedade | null>(null);
   const [ndvi, setNdvi] = useState<NdviResponse | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -62,7 +64,7 @@ export default function DashboardScreen() {
       }
     >
       {/* cabeçalho */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.titulo}>🌾 AgroSat</Text>
         <Text style={styles.subtitulo}>
           {propriedade?.nome ?? "—"}
@@ -176,7 +178,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F5F5" },
   centro: { flex: 1, justifyContent: "center", alignItems: "center" },
   carregando: { marginTop: 12, color: "#666", fontSize: 14 },
-  header: { backgroundColor: "#2E7D32", padding: 24, paddingTop: 48 },
+  header: { backgroundColor: "#2E7D32", padding: 24 },
   titulo: { color: "#FFF", fontSize: 22, fontWeight: "bold" },
   subtitulo: { color: "#C8E6C9", fontSize: 18, marginTop: 4 },
   local: { color: "#A5D6A7", fontSize: 13, marginTop: 2 },

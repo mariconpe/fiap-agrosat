@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { listarAlertas, verificarRiscos } from "../services/api";
 import type { Alerta } from "../types";
 
@@ -91,7 +92,7 @@ export default function AlertasScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <TouchableOpacity
         style={[styles.botaoVerificar, verificando && { opacity: 0.6 }]}
         onPress={executarVerificacao}
@@ -119,7 +120,7 @@ export default function AlertasScreen() {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

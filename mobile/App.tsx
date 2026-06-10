@@ -1,6 +1,7 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Text } from "react-native";
 
 import DashboardScreen from "./src/screens/DashboardScreen";
@@ -11,17 +12,13 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: "#2E7D32",
           tabBarInactiveTintColor: "#999",
-          tabBarStyle: {
-            height: 60,
-            paddingBottom: 8,
-            paddingTop: 4,
-          },
         }}
       >
         <Tab.Screen
@@ -55,6 +52,7 @@ export default function App() {
           }}
         />
       </Tab.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
