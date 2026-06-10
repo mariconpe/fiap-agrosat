@@ -17,6 +17,8 @@ import {
 
 import { consultarNdvi, listarPropriedades, listarSensores } from "../services/api";
 import type { NdviResponse, Propriedade, Sensor } from "../types";
+import ScreenHeader from "../components/ScreenHeader";
+import SectionHeader from "../components/SectionHeader";
 import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
 
 const STATUS_NDVI = {
@@ -71,10 +73,7 @@ export default function DashboardScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingBottom: TAB_BAR_CLEARANCE,
-      }}
+      contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
       refreshControl={
         <RefreshControl
           refreshing={recarregando}
@@ -85,21 +84,18 @@ export default function DashboardScreen() {
         />
       }
     >
-      {/* cabeçalho */}
-      <View style={styles.header}>
-        <View style={styles.headerTexto}>
-          <Text style={styles.saudacao}>{saudacaoPorHora()}, João</Text>
-          <Text style={styles.titulo} numberOfLines={1}>
-            {propriedade?.nome ?? "AgroSat"}
-          </Text>
-          <Text style={styles.subtitulo} numberOfLines={1}>
-            {propriedade?.cultura ?? "—"} · {formatarArea(propriedade?.areaHectares)} ha
-          </Text>
-        </View>
-        <View style={styles.avatar}>
-          <Ionicons name="leaf" size={20} color={colors.brand} />
-        </View>
-      </View>
+      <ScreenHeader
+        saudacao={`${saudacaoPorHora()}, João`}
+        titulo={propriedade?.nome ?? "AgroSat"}
+        subtitulo={`${propriedade?.cultura ?? "—"} · ${formatarArea(
+          propriedade?.areaHectares
+        )} ha`}
+        acessorio={
+          <View style={styles.avatar}>
+            <Ionicons name="leaf" size={20} color={colors.brand} />
+          </View>
+        }
+      />
 
       {/* visão de satélite do talhão (raster NDVI) */}
       <View style={styles.heroCard}>
@@ -161,12 +157,15 @@ export default function DashboardScreen() {
       )}
 
       {/* hoje */}
-      <View style={styles.secaoLinha}>
-        <Text style={styles.secaoTitulo}>Hoje</Text>
-        <Text style={styles.secaoData}>{dataDeHoje()}</Text>
-      </View>
+      <SectionHeader titulo="Hoje" meta={dataDeHoje()} />
 
-      <View style={styles.cartoesHoje}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={176}
+        decelerationRate="fast"
+        contentContainerStyle={styles.carrosselHoje}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Umidade do solo, abrir sensores"
@@ -196,23 +195,31 @@ export default function DashboardScreen() {
           />
         </Pressable>
 
-        <View style={styles.cartaoHoje}>
-          <View style={styles.cartaoHojeTopo}>
-            <Text style={styles.cartaoHojeTitulo}>Clima</Text>
-          </View>
-          <Text style={[styles.cartaoHojeValor, { color: colors.critical }]}>
-            3 mm
-          </Text>
-          <Text style={styles.cartaoHojeNota}>Chuva nos últimos 15 dias</Text>
-          <View style={styles.climaRodape}>
-            <Ionicons name="thermometer-outline" size={14} color={colors.warning} />
-            <Text style={styles.climaRodapeTexto}>Máxima de 32°C hoje</Text>
-          </View>
-        </View>
-      </View>
+        <CartaoHoje
+          titulo="Chuva"
+          valor="3 mm"
+          corValor={colors.critical}
+          nota="Acumulado em 15 dias"
+          rodape="Mínimo saudável: 10 mm"
+        />
+        <CartaoHoje
+          titulo="Temperatura"
+          valor="32°C"
+          corValor={colors.warning}
+          nota="Máxima de hoje"
+          rodape="Mínima de 22°C · alerta acima de 30°C"
+        />
+        <CartaoHoje
+          titulo="NDVI em 7 dias"
+          valor="−0,17"
+          corValor={colors.critical}
+          nota="Variação do vigor"
+          rodape="Queda além do limite de 0,15"
+        />
+      </ScrollView>
 
       {/* propriedade */}
-      <Text style={styles.secaoTituloSolo}>Propriedade</Text>
+      <SectionHeader titulo="Propriedade" />
       <View style={styles.cardLista}>
         <LinhaInfo
           icone="resize-outline"
@@ -237,6 +244,31 @@ export default function DashboardScreen() {
 }
 
 // ----- componentes auxiliares -----
+
+function CartaoHoje({
+  titulo,
+  valor,
+  corValor,
+  nota,
+  rodape,
+}: {
+  titulo: string;
+  valor: string;
+  corValor: string;
+  nota: string;
+  rodape: string;
+}) {
+  return (
+    <View style={styles.cartaoHoje}>
+      <View style={styles.cartaoHojeTopo}>
+        <Text style={styles.cartaoHojeTitulo}>{titulo}</Text>
+      </View>
+      <Text style={[styles.cartaoHojeValor, { color: corValor }]}>{valor}</Text>
+      <Text style={styles.cartaoHojeNota}>{nota}</Text>
+      <Text style={styles.cartaoHojeRodape}>{rodape}</Text>
+    </View>
+  );
+}
 
 function GraficoBarras({ valores, cor }: { valores: number[]; cor: string }) {
   if (valores.length === 0) return null;
@@ -364,22 +396,6 @@ function extrairCidade(localizacao?: string): string {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  headerTexto: { flex: 1, marginRight: spacing.md },
-  saudacao: { fontSize: 14, color: colors.inkSecondary },
-  titulo: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: colors.ink,
-    letterSpacing: 0.2,
-    marginTop: 2,
-  },
-  subtitulo: { fontSize: 14, color: colors.inkSecondary, marginTop: 2 },
   avatar: {
     width: 40,
     height: 40,
@@ -454,7 +470,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: colors.inkSecondary,
-    marginHorizontal: spacing.xl,
+    marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
   },
@@ -481,31 +497,12 @@ const styles = StyleSheet.create({
   bannerTexto: { flex: 1, fontSize: 15, fontWeight: "600", color: colors.critical },
   pressionado: { opacity: 0.7 },
 
-  secaoLinha: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.sm,
-  },
-  secaoTitulo: { fontSize: 20, fontWeight: "700", color: colors.ink },
-  secaoData: { fontSize: 14, color: colors.inkSecondary },
-  secaoTituloSolo: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: colors.ink,
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-
-  cartoesHoje: {
-    flexDirection: "row",
-    gap: spacing.sm,
+  carrosselHoje: {
     paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   cartaoHoje: {
-    flex: 1,
+    width: 168,
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     padding: spacing.lg,
@@ -520,6 +517,13 @@ const styles = StyleSheet.create({
   cartaoHojeTitulo: { fontSize: 14, fontWeight: "600", color: colors.ink },
   cartaoHojeValor: { fontSize: 28, fontWeight: "700", letterSpacing: -0.3 },
   cartaoHojeNota: { fontSize: 12, color: colors.inkSecondary, marginTop: 2 },
+  cartaoHojeRodape: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.inkTertiary,
+    marginTop: "auto",
+    paddingTop: spacing.md,
+  },
 
   grafico: {
     flexDirection: "row",
@@ -529,15 +533,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   graficoBarra: { flex: 1, borderRadius: 3 },
-
-  climaRodape: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: "auto",
-    paddingTop: spacing.md,
-  },
-  climaRodapeTexto: { fontSize: 13, color: colors.inkSecondary },
 
   cardLista: {
     backgroundColor: colors.surface,

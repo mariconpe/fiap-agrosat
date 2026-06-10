@@ -9,10 +9,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { listarAlertas, marcarAlertaComoLida, verificarRiscos } from "../services/api";
 import type { Alerta } from "../types";
+import ScreenHeader from "../components/ScreenHeader";
 import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
 
 const PROPRIEDADE_ID = 1;
@@ -24,7 +24,6 @@ const SEVERIDADE = {
 } as const;
 
 export default function AlertasScreen() {
-  const insets = useSafeAreaInsets();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
@@ -57,34 +56,33 @@ export default function AlertasScreen() {
   const naoLidos = alertas.filter((a) => !a.lida).length;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-      {/* cabeçalho — large title + ação de verificação */}
-      <View style={styles.header}>
-        <View style={styles.headerTexto}>
-          <Text style={styles.titulo}>Alertas</Text>
-          <Text style={styles.subtitulo}>
-            {naoLidos === 0
-              ? "Nenhum alerta não lido"
-              : `${naoLidos} ${naoLidos === 1 ? "não lido" : "não lidos"}`}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Verificar riscos agora"
-          onPress={executarVerificacao}
-          disabled={verificando}
-          style={({ pressed }) => [
-            styles.botaoVerificar,
-            pressed && styles.pressionado,
-          ]}
-        >
-          {verificando ? (
-            <ActivityIndicator size="small" color={colors.brand} />
-          ) : (
-            <Ionicons name="scan" size={20} color={colors.brand} />
-          )}
-        </Pressable>
-      </View>
+    <View style={styles.container}>
+      <ScreenHeader
+        titulo="Alertas"
+        subtitulo={
+          naoLidos === 0
+            ? "Nenhum alerta não lido"
+            : `${naoLidos} ${naoLidos === 1 ? "não lido" : "não lidos"}`
+        }
+        acessorio={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Verificar riscos agora"
+            onPress={executarVerificacao}
+            disabled={verificando}
+            style={({ pressed }) => [
+              styles.botaoVerificar,
+              pressed && styles.pressionado,
+            ]}
+          >
+            {verificando ? (
+              <ActivityIndicator size="small" color={colors.brand} />
+            ) : (
+              <Ionicons name="scan" size={20} color={colors.brand} />
+            )}
+          </Pressable>
+        }
+      />
 
       {carregando ? (
         <View style={styles.listaConteudo}>
@@ -205,15 +203,6 @@ function formatarDataHora(dataIso: string): string {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  headerTexto: { flex: 1 },
-  titulo: { fontSize: 30, fontWeight: "700", color: colors.ink, letterSpacing: 0.2 },
-  subtitulo: { fontSize: 14, color: colors.inkSecondary, marginTop: 2 },
   botaoVerificar: {
     width: 44,
     height: 44,

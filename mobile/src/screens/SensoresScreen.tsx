@@ -7,10 +7,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { listarSensores } from "../services/api";
 import type { Sensor } from "../types";
+import ScreenHeader from "../components/ScreenHeader";
 import { colors, radius, shadow, spacing, TAB_BAR_CLEARANCE } from "../theme";
 
 const PROPRIEDADE_ID = 1;
@@ -58,7 +58,6 @@ const STATUS = {
 } as const;
 
 export default function SensoresScreen() {
-  const insets = useSafeAreaInsets();
   const [sensores, setSensores] = useState<Sensor[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
@@ -74,13 +73,11 @@ export default function SensoresScreen() {
   }, [carregarSensores]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-      <View style={styles.header}>
-        <Text style={styles.titulo}>Sensores</Text>
-        <Text style={styles.subtitulo}>
-          Dispositivos IoT instalados na propriedade
-        </Text>
-      </View>
+    <View style={styles.container}>
+      <ScreenHeader
+        titulo="Sensores"
+        subtitulo="Dispositivos IoT instalados na propriedade"
+      />
 
       {carregando ? (
         <View style={styles.listaConteudo}>
@@ -194,10 +191,6 @@ function formatarDataHora(dataIso: string): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-
-  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  titulo: { fontSize: 30, fontWeight: "700", color: colors.ink, letterSpacing: 0.2 },
-  subtitulo: { fontSize: 14, color: colors.inkSecondary, marginTop: 2 },
 
   listaConteudo: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   listaVazia: { flexGrow: 1, justifyContent: "center" },
