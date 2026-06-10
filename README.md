@@ -22,6 +22,33 @@ mvn spring-boot:run
 
 Acessar: http://localhost:8080/swagger-ui/index.html
 
+### Testes
+
+```bash
+mvn test
+```
+
+Plano de testes em [docs/plano-de-testes.md](docs/plano-de-testes.md) e
+evidências em [docs/evidencias-testes.md](docs/evidencias-testes.md).
+
+### Simulador IoT
+
+Com a API rodando:
+
+```bash
+python3 iot/simulador.py
+```
+
+Detalhes em [iot/README.md](iot/README.md).
+
+### App mobile
+
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
 ### Dados de seed
 
 A aplicação sobe com dados de demonstração de uma propriedade real:
@@ -54,6 +81,7 @@ src/main/java/br/com/fiap/agrosat/
 | `GET` | `/api/propriedades/{id}/alertas` | Alertas ativos |
 | `POST` | `/api/sensores/dados` | Registrar leitura IoT |
 | `POST` | `/api/alertas/verificar` | Rodar engine de risco |
+| `POST` | `/api/auth/login` | Autenticar produtor (senha com hash SHA-256) |
 
 ## Documentação
 
