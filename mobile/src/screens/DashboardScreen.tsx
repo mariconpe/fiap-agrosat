@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import MapView, { Polygon } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   useNavigation,
@@ -19,6 +21,7 @@ import {
 
 import { consultarNdvi, listarPropriedades, listarSensores } from "../services/api";
 import type { NdviResponse, Propriedade, Sensor } from "../types";
+import InsightSheet, { type InsightConteudo } from "../components/InsightSheet";
 import ScreenHeader from "../components/ScreenHeader";
 import SectionHeader from "../components/SectionHeader";
 import { useReducedMotion } from "../hooks/use-reduced-motion";
@@ -31,8 +34,16 @@ const STATUS_NDVI = {
   SEM_DADOS: { cor: colors.inkTertiary, tinta: colors.surfaceMuted, label: "Sem dados" },
 } as const;
 
-const RASTER_COLUNAS = 9;
-const RASTER_LINHAS = 5;
+// Fazenda Esperança — Botucatu/SP (coordenadas do seed da API)
+const FAZENDA = { latitude: -22.85, longitude: -48.43 };
+const TALHAO_PRINCIPAL = [
+  { latitude: -22.8462, longitude: -48.4338 },
+  { latitude: -22.8451, longitude: -48.4282 },
+  { latitude: -22.8478, longitude: -48.4247 },
+  { latitude: -22.8528, longitude: -48.4262 },
+  { latitude: -22.8541, longitude: -48.4318 },
+  { latitude: -22.8506, longitude: -48.4352 },
+];
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -41,6 +52,7 @@ export default function DashboardScreen() {
   const [ndvi, setNdvi] = useState<NdviResponse | null>(null);
   const [umidadeSerie, setUmidadeSerie] = useState<number[]>([]);
   const [horaAtualizacao, setHoraAtualizacao] = useState<string | null>(null);
+  const [insightAtivo, setInsightAtivo] = useState<InsightConteudo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
 
@@ -66,6 +78,11 @@ export default function DashboardScreen() {
   useEffect(() => {
     carregarDados();
   }, [carregarDados]);
+
+  function abrirInsight(insight: InsightConteudo) {
+    Haptics.selectionAsync();
+    setInsightAtivo(insight);
+  }
 
   if (carregando) {
     return <DashboardSkeleton paddingTop={insets.top + 12} />;
@@ -105,15 +122,30 @@ export default function DashboardScreen() {
         }
       />
 
-      {/* visão de satélite do talhão (raster NDVI) */}
+      {/* talhão visto do satélite, tingido pelo status do NDVI */}
       <View style={styles.heroCard}>
-        <View style={styles.raster}>
-          {gerarRasterNdvi(valorNdvi).map((corCelula, indice) => (
-            <View
-              key={indice}
-              style={[styles.rasterCelula, { backgroundColor: corCelula }]}
+        <View style={styles.mapa} pointerEvents="none">
+          <MapView
+            style={StyleSheet.absoluteFill}
+            mapType="satellite"
+            initialRegion={{
+              ...FAZENDA,
+              latitudeDelta: 0.016,
+              longitudeDelta: 0.016,
+            }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            rotateEnabled={false}
+            pitchEnabled={false}
+            toolbarEnabled={false}
+          >
+            <Polygon
+              coordinates={TALHAO_PRINCIPAL}
+              fillColor={`${status.cor}55`}
+              strokeColor="#FFFFFF"
+              strokeWidth={2}
             />
-          ))}
+          </MapView>
         </View>
 
         <View style={styles.heroChips} pointerEvents="none">
@@ -125,8 +157,16 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <View style={styles.heroLegenda} pointerEvents="none">
-          <View style={styles.chipGrande}>
+        <View style={styles.heroLegenda}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Abrir histórico de NDVI"
+            onPress={() => {
+              Haptics.selectionAsync();
+              navigation.navigate("NdviHistorico");
+            }}
+            style={({ pressed }) => [styles.chipGrande, pressed && styles.pressionado]}
+          >
             <Text style={styles.chipGrandeTexto}>
               NDVI{" "}
               <Text style={styles.chipGrandeValor}>
@@ -136,20 +176,15 @@ export default function DashboardScreen() {
               <Text style={{ color: status.cor, fontWeight: "700" }}>
                 {status.label}
               </Text>
+              {"  ›"}
             </Text>
-          </View>
+          </Pressable>
         </View>
       </View>
 
-      <View style={styles.legenda}>
-        <ItemLegenda cor="#3DA15A" rotulo="Saudável" />
-        <ItemLegenda cor="#D9AE3B" rotulo="Atenção" />
-        <ItemLegenda cor="#CB6B3F" rotulo="Estresse" />
-      </View>
-
       <Text style={styles.heroNota}>
-        Imagem de satélite traduzida em vigor da vegetação. Acima de 0,60 a
-        lavoura está saudável.
+        Talhão principal monitorado por satélite. A área tingida mostra o
+        status do vigor da vegetação: acima de 0,60 a lavoura está saudável.
       </Text>
 
       {/* alertas pendentes */}
@@ -184,8 +219,8 @@ export default function DashboardScreen() {
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Umidade do solo, abrir sensores"
-          onPress={() => navigation.navigate("Sensores")}
+          accessibilityLabel="Umidade do solo, ver detalhes"
+          onPress={() => abrirInsight(montarInsightUmidade(umidadeAtual))}
           style={({ pressed }) => [styles.cartaoHoje, pressed && styles.pressionado]}
         >
           <View style={styles.cartaoHojeTopo}>
@@ -217,6 +252,7 @@ export default function DashboardScreen() {
           corValor={colors.critical}
           nota="Acumulado em 15 dias"
           rodape="Mínimo saudável: 10 mm"
+          aoTocar={() => abrirInsight(INSIGHT_CHUVA)}
         />
         <CartaoHoje
           titulo="Temperatura"
@@ -224,6 +260,7 @@ export default function DashboardScreen() {
           corValor={colors.warning}
           nota="Máxima de hoje"
           rodape="Mínima de 22°C · alerta acima de 30°C"
+          aoTocar={() => abrirInsight(INSIGHT_TEMPERATURA)}
         />
         <CartaoHoje
           titulo="NDVI em 7 dias"
@@ -231,8 +268,32 @@ export default function DashboardScreen() {
           corValor={colors.critical}
           nota="Variação do vigor"
           rodape="Queda além do limite de 0,15"
+          aoTocar={() =>
+            abrirInsight({
+              ...INSIGHT_NDVI,
+              acao: {
+                rotulo: "Ver histórico completo",
+                aoTocar: () => {
+                  setInsightAtivo(null);
+                  navigation.navigate("NdviHistorico");
+                },
+              },
+            })
+          }
         />
       </ScrollView>
+
+      <InsightSheet insight={insightAtivo} aoFechar={() => setInsightAtivo(null)}>
+        {insightAtivo?.titulo === "Umidade do solo" && (
+          <View style={styles.graficoSheet}>
+            <GraficoBarras
+              valores={umidadeSerie}
+              cor={umidadeCritica ? colors.critical : colors.brand}
+            />
+            <Text style={styles.graficoSheetNota}>Últimas 6 leituras do sensor</Text>
+          </View>
+        )}
+      </InsightSheet>
 
       {/* propriedade */}
       <SectionHeader titulo="Propriedade" />
@@ -260,6 +321,88 @@ export default function DashboardScreen() {
 }
 
 // ----- componentes auxiliares -----
+
+// ----- conteúdo dos insights -----
+
+function montarInsightUmidade(umidadeAtual: number | null): InsightConteudo {
+  const isCritica = umidadeAtual != null && umidadeAtual < 20;
+  return {
+    titulo: "Umidade do solo",
+    valor:
+      umidadeAtual != null ? `${umidadeAtual.toFixed(1).replace(".", ",")}%` : "—",
+    corValor: isCritica ? colors.critical : colors.ink,
+    statusLabel: isCritica ? "Crítico" : "Adequada",
+    statusCor: isCritica ? colors.critical : colors.success,
+    statusTinta: isCritica ? colors.criticalTint : colors.successTint,
+    fonte: "Sensor IoT de campo · leitura a cada 30 min",
+    oQueE:
+      "Sensores capacitivos instalados a 20 cm de profundidade medem a água disponível para as raízes e enviam as leituras direto para a plataforma.",
+    comoLer: [
+      { cor: colors.critical, texto: "Abaixo de 20%: estresse hídrico, a planta sofre" },
+      { cor: colors.warning, texto: "Entre 20% e 30%: zona de atenção, monitore com frequência" },
+      { cor: colors.success, texto: "Entre 30% e 35%: faixa ideal para a soja" },
+    ],
+    recomendacao:
+      "Com o solo seco e sem chuva no acumulado, priorize irrigar no início da manhã para reduzir a perda por evaporação.",
+  };
+}
+
+const INSIGHT_CHUVA: InsightConteudo = {
+  titulo: "Chuva",
+  valor: "3 mm",
+  corValor: colors.critical,
+  statusLabel: "Muito abaixo",
+  statusCor: colors.critical,
+  statusTinta: colors.criticalTint,
+  fonte: "Satélite meteorológico · acumulado de 15 dias",
+  oQueE:
+    "Estimativa de precipitação por satélite para a área da propriedade, somada nos últimos 15 dias. Dispensa pluviômetro físico no talhão.",
+  comoLer: [
+    { cor: colors.critical, texto: "Menos de 10 mm em 15 dias: risco de seca" },
+    { cor: colors.warning, texto: "Entre 10 mm e 25 mm: suficiente apenas com solo já úmido" },
+    { cor: colors.success, texto: "Acima de 25 mm: reposição adequada de água" },
+  ],
+  recomendacao:
+    "Acumulado de 3 mm está bem abaixo do mínimo. Cruze com a umidade do solo antes de decidir a lâmina de irrigação.",
+};
+
+const INSIGHT_TEMPERATURA: InsightConteudo = {
+  titulo: "Temperatura",
+  valor: "32°C",
+  corValor: colors.warning,
+  statusLabel: "Calor extremo",
+  statusCor: colors.warning,
+  statusTinta: colors.warningTint,
+  fonte: "Satélite · máxima e mínima de hoje",
+  oQueE:
+    "Temperaturas máxima e mínima diárias estimadas por satélite para o talhão. Calor prolongado acelera a evaporação e o ciclo de pragas.",
+  comoLer: [
+    { cor: colors.success, texto: "Até 25°C: confortável para a cultura" },
+    { cor: colors.warning, texto: "Entre 25°C e 30°C: atenção à perda de água" },
+    { cor: colors.critical, texto: "Acima de 30°C: favorece pragas e estresse térmico" },
+  ],
+  recomendacao:
+    "Máxima de 32°C favorece percevejo e lagarta. Reforce o monitoramento nas horas mais quentes do dia.",
+};
+
+const INSIGHT_NDVI: InsightConteudo = {
+  titulo: "NDVI em 7 dias",
+  valor: "−0,17",
+  corValor: colors.critical,
+  statusLabel: "Queda acelerada",
+  statusCor: colors.critical,
+  statusTinta: colors.criticalTint,
+  fonte: "Landsat e Sentinel · variação em 7 dias",
+  oQueE:
+    "O NDVI compara a luz vermelha e a infravermelha refletidas pela lavoura. Planta saudável reflete mais infravermelho, então quedas rápidas no índice denunciam problema antes de ele ficar visível a olho nu.",
+  comoLer: [
+    { cor: colors.success, texto: "Queda de até 0,05 em 7 dias: variação normal" },
+    { cor: colors.warning, texto: "Entre 0,05 e 0,15: observe os talhões com mais atenção" },
+    { cor: colors.critical, texto: "Acima de 0,15: investigue praga ou estresse no campo" },
+  ],
+  recomendacao:
+    "A queda de 0,17 passou do limite. Agende inspeção de campo na área tingida do mapa antes da próxima aplicação.",
+};
 
 function PontoPulsante() {
   const isReducedMotion = useReducedMotion();
@@ -290,37 +433,36 @@ function PontoPulsante() {
   return <Animated.View style={[styles.pontoOnline, { opacity: opacidade }]} />;
 }
 
-function ItemLegenda({ cor, rotulo }: { cor: string; rotulo: string }) {
-  return (
-    <View style={styles.legendaItem}>
-      <View style={[styles.legendaPonto, { backgroundColor: cor }]} />
-      <Text style={styles.legendaTexto}>{rotulo}</Text>
-    </View>
-  );
-}
-
 function CartaoHoje({
   titulo,
   valor,
   corValor,
   nota,
   rodape,
+  aoTocar,
 }: {
   titulo: string;
   valor: string;
   corValor: string;
   nota: string;
   rodape: string;
+  aoTocar: () => void;
 }) {
   return (
-    <View style={styles.cartaoHoje}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${titulo}, ver detalhes`}
+      onPress={aoTocar}
+      style={({ pressed }) => [styles.cartaoHoje, pressed && styles.pressionado]}
+    >
       <View style={styles.cartaoHojeTopo}>
         <Text style={styles.cartaoHojeTitulo}>{titulo}</Text>
+        <Ionicons name="chevron-forward" size={14} color={colors.iconMuted} />
       </View>
       <Text style={[styles.cartaoHojeValor, { color: corValor }]}>{valor}</Text>
       <Text style={styles.cartaoHojeNota}>{nota}</Text>
       <Text style={styles.cartaoHojeRodape}>{rodape}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -454,31 +596,6 @@ function DashboardSkeleton({ paddingTop }: { paddingTop: number }) {
 
 // ----- helpers -----
 
-/** Raster NDVI determinístico: simula a leitura de satélite do talhão. */
-function gerarRasterNdvi(ndvi: number | null): string[] {
-  const base = ndvi ?? 0.5;
-  const celulas: string[] = [];
-
-  for (let indice = 0; indice < RASTER_COLUNAS * RASTER_LINHAS; indice++) {
-    const ruido = pseudoRuido(indice);
-    const vigor = Math.min(Math.max(base + (ruido - 0.5) * 0.35, 0), 1);
-
-    if (vigor >= 0.6) {
-      celulas.push(ruido > 0.5 ? "#2F8F4A" : "#3DA15A");
-    } else if (vigor >= 0.45) {
-      celulas.push(ruido > 0.5 ? "#D9AE3B" : "#E0BC55");
-    } else {
-      celulas.push(ruido > 0.5 ? "#CB6B3F" : "#D27E50");
-    }
-  }
-  return celulas;
-}
-
-function pseudoRuido(indice: number): number {
-  const bruto = Math.sin(indice * 12.9898 + 78.233) * 43758.5453;
-  return bruto - Math.floor(bruto);
-}
-
 function extrairSerieUmidade(sensores: Sensor[]): number[] {
   return sensores
     .filter((sensor) => sensor.tipo === "UMIDADE_SOLO")
@@ -528,26 +645,14 @@ const styles = StyleSheet.create({
   },
 
   heroCard: {
-    height: 190,
+    height: 210,
     marginHorizontal: spacing.lg,
     borderRadius: radius.card,
     overflow: "hidden",
     backgroundColor: "#14381F",
     ...shadow.card,
   },
-  raster: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 3,
-  },
-  rasterCelula: {
-    width: `${100 / RASTER_COLUNAS}%`,
-    height: `${100 / RASTER_LINHAS}%`,
-    borderWidth: 1.5,
-    borderColor: "#14381F",
-    borderRadius: 4,
-  },
+  mapa: { ...StyleSheet.absoluteFillObject },
   heroChips: {
     position: "absolute",
     top: spacing.md,
@@ -587,16 +692,6 @@ const styles = StyleSheet.create({
   },
   chipGrandeTexto: { fontSize: 14, color: colors.inkSecondary },
   chipGrandeValor: { fontWeight: "700", color: colors.ink },
-
-  legenda: {
-    flexDirection: "row",
-    gap: spacing.lg,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-  },
-  legendaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  legendaPonto: { width: 8, height: 8, borderRadius: 4 },
-  legendaTexto: { fontSize: 12, color: colors.inkSecondary },
 
   heroNota: {
     fontSize: 13,
@@ -665,6 +760,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   graficoBarra: { flex: 1, borderRadius: 3 },
+  graficoSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  graficoSheetNota: {
+    fontSize: 12,
+    color: colors.inkTertiary,
+    marginTop: spacing.sm,
+  },
 
   cardLista: {
     backgroundColor: colors.surface,
