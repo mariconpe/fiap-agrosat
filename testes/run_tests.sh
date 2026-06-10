@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Executa os casos de teste do AgroSat e grava evidências em evidencias.log.
+# Executa os casos de teste do AgroSat e grava evidências em evidencias_testes.log.
 # Pré-requisito: aplicação rodando em http://localhost:8080 com o seed carregado.
 #
 set -u
 BASE="${BASE_URL:-http://localhost:8080}"
-LOG="evidencias.log"
+LOG="evidencias_testes.log"
 PASS=0
 FAIL=0
 

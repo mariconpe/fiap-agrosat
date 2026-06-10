@@ -1,7 +1,7 @@
 GLOBAL SOLUTION 2026/1 - 4o ANO ENGENHARIA DE SOFTWARE - FIAP
 Projeto: AgroSat
 
-GRUPO: [preencher nome do grupo]
+GRUPO: AgroSat
 
 INTEGRANTES:
 - RM552386 - Guilherme Mazur

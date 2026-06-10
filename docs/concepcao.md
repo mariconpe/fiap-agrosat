@@ -132,7 +132,7 @@ conceito de forma independente, conforme orientação do desafio.*
 
 ---
 
-## 7. Telas do App Mobile (Wireframe)
+## 7. Telas do App Mobile
 
 ### Tela 1 — Dashboard
 
@@ -154,10 +154,10 @@ de progresso indicando o nível atual em relação aos limites saudáveis.
 
 ## 8. Simulação IoT
 
-Dispositivo simulado que envia leituras periódicas de umidade do solo para o
-endpoint `POST /api/sensores/dados`. Pode ser implementado como script Python
-ou aplicação console em C# que gera valores entre 15% e 35% com variação
-gradual ao longo do tempo.
+Dispositivo simulado (script Python em [`iot/simulador_sensor.py`](../iot/simulador_sensor.py))
+que envia leituras periódicas de umidade do solo para o endpoint
+`POST /api/sensores/dados`, gerando valores entre 15% e 35% com variação gradual
+ao longo do tempo.
 
 ---
 
@@ -178,5 +178,5 @@ gradual ao longo do tempo.
 - **Backend:** Java 17, Spring Boot 3.3.5, Spring Data JPA, Hibernate
 - **Banco:** H2 (desenvolvimento), PostgreSQL (produção)
 - **Documentação:** Swagger / OpenAPI 3
-- **Mobile:** React Native + TypeScript (projetado)
-- **IoT:** Python ou C# (console app)
+- **Mobile:** React Native + Expo + TypeScript
+- **IoT:** Python (simulador de sensor de umidade do solo)

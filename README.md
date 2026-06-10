@@ -83,6 +83,22 @@ curl -i -X POST http://localhost:8080/api/auth/login \
   -d '{"email":"joao@agrosat.com.br","senha":"123456"}'   # 200
 ```
 
+## App Mobile
+
+App React Native + Expo (SDK 54) em [`mobile/`](mobile/), com 3 telas:
+Dashboard (NDVI), Alertas (seca/praga) e Sensores (IoT). Consome a API quando
+ela está no ar e cai em dados mockados de demonstração quando não está.
+
+```bash
+cd mobile
+npm install
+npm run web      # abre no navegador (jeito mais rápido de ver funcionando)
+npm start        # gera QR code para abrir no Expo Go do celular
+```
+
+Instruções completas (Android/iOS, conexão com o backend, versões) em
+[`mobile/README.md`](mobile/README.md).
+
 ## Simulação IoT
 
 Sensor simulado de umidade do solo em [`iot/`](iot/). Envia leituras para
