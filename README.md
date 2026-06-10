@@ -7,11 +7,11 @@ produtores rurais.
 
 ## Stack
 
-- Java 17
-- Spring Boot 3.3.5
-- Spring Data JPA / Hibernate
-- H2 (dev) / PostgreSQL (prod)
-- Swagger / OpenAPI 3
+- **Backend:** Java 17, Spring Boot 3.3.5, Spring Data JPA / Hibernate
+- **Banco:** H2 (dev) / PostgreSQL (prod) — scripts SQL em [`banco/`](banco/)
+- **Docs da API:** Swagger / OpenAPI 3
+- **Mobile:** React Native + TypeScript (Expo SDK 54)
+- **IoT:** simulador em Python 3 (stdlib)
 
 ## Como rodar
 
@@ -47,7 +47,17 @@ Detalhes em [iot/README.md](iot/README.md).
 cd mobile
 npm install
 npx expo start
+# escanear o QR code com o app Expo Go (iOS/Android)
 ```
+
+Fluxo do app: **login** (conta demo abaixo) → **Lavoura** (mapa de satélite
+com o talhão tingido pelo status NDVI + carrossel de métricas com detalhes ao
+toque) → **Alertas** (riscos de seca/praga com recomendação de ação e badge de
+não lidos) → **Sensores** (leituras IoT) → **histórico NDVI** e **perfil** com
+logout pela tab bar.
+
+O app consome a API em `http://localhost:8080`; sem a API no ar, usa dados
+mockados equivalentes ao seed — o login demo funciona nos dois casos.
 
 ### Dados de seed
 
