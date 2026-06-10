@@ -3,6 +3,8 @@
 App mobile do **AgroSat** — monitoramento agrícola no celular do produtor.
 Feito em **React Native + Expo (SDK 54)** com TypeScript.
 
+**Vídeo de Apresentação (Pitch):** [Assista no YouTube](https://www.youtube.com/watch?v=qKuYnX5o-Oc)
+
 O app funciona de forma autônoma: se o backend Spring Boot estiver no ar ele
 consome os dados reais; se não estiver, cai automaticamente em **dados mockados**
 de demonstração (ver [`src/services/api.ts`](src/services/api.ts)). Ou seja, dá
@@ -12,11 +14,13 @@ para apresentar o app mesmo sem subir a API.
 
 | Tela | Arquivo | O que mostra |
 |------|---------|--------------|
-| 🌾 **Dashboard** | [`src/screens/DashboardScreen.tsx`](src/screens/DashboardScreen.tsx) | Propriedade, NDVI (índice de vegetação) com status colorido e indicadores rápidos (temperatura, umidade, chuva) |
+| 🔑 **Login** | [`src/screens/LoginScreen.tsx`](src/screens/LoginScreen.tsx) | Autenticação segura do produtor (com verificação de hash no backend) |
+| 🌾 **Dashboard** | [`src/screens/DashboardScreen.tsx`](src/screens/DashboardScreen.tsx) | Propriedade, NDVI com status colorido, indicadores rápidos e carrossel de métricas |
+| 📈 **Histórico NDVI** | [`src/screens/NdviHistoricoScreen.tsx`](src/screens/NdviHistoricoScreen.tsx) | Gráfico e histórico detalhado das coletas de NDVI da fazenda |
 | ⚠️ **Alertas** | [`src/screens/AlertasScreen.tsx`](src/screens/AlertasScreen.tsx) | Lista de alertas de seca/praga por severidade + botão "Verificar riscos agora" |
 | 📡 **Sensores** | [`src/screens/SensoresScreen.tsx`](src/screens/SensoresScreen.tsx) | Leituras IoT (umidade do solo, temperatura) com barras de progresso |
 
-Navegação por abas inferiores ([`App.tsx`](App.tsx)).
+Navegação por abas inferiores ([`App.tsx`](App.tsx)) com Tab Bar flutuante e Perfil do Produtor.
 
 ## Pré-requisitos
 
@@ -40,7 +44,6 @@ Depois, escolha como abrir:
 | `npm start` | mostra QR code — escaneie com o **Expo Go** no celular |
 | `npm run android` | abre no emulador/dispositivo **Android** |
 | `npm run ios` | abre no simulador **iOS** (macOS) |
-| `npm run web` | abre no **navegador** (jeito mais rápido de testar) |
 
 > 💡 Para a demo mais simples, use `npm run web` — abre direto no navegador,
 > sem precisar de emulador nem celular.

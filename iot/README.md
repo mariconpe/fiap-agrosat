@@ -1,6 +1,8 @@
 # 📡 AgroSat — Simulação de IoT
 
 > Global Solution 2026/1 — Parte 6: Simulação ou Integração de IoT
+>
+> **Vídeo de Apresentação (Pitch):** [Assista no YouTube](https://www.youtube.com/watch?v=qKuYnX5o-Oc)
 
 ## Qual sensor é simulado
 

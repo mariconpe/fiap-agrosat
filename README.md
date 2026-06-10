@@ -5,6 +5,8 @@ produtores rurais.
 
 **Global Solution 2026/1 — 4ESOA — FIAP**
 
+**Vídeo de Apresentação (Pitch):** [Assista no YouTube](https://www.youtube.com/watch?v=qKuYnX5o-Oc)
+
 ## Stack
 
 - **Backend:** Java 17, Spring Boot 3.3.5, Spring Data JPA / Hibernate
@@ -48,6 +50,10 @@ Com a API no ar, em outro terminal:
 
 ```bash
 python3 iot/simulador.py
+
+# Ou
+
+python iot/simulador.py
 ```
 
 Envia 10 leituras de umidade do solo para `POST /api/sensores/dados`,
@@ -61,7 +67,6 @@ cd mobile
 npm install
 npx expo start
 # escanear o QR code com o Expo Go (celular no mesmo Wi-Fi)
-# ou: npm run web — abre no navegador, jeito mais rápido de ver funcionando
 ```
 
 Fluxo do app: **login** (conta demo abaixo) → **Lavoura** (mapa de satélite

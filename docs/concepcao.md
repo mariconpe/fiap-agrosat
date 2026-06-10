@@ -134,30 +134,31 @@ conceito de forma independente, conforme orientação do desafio.*
 
 ## 7. Telas do App Mobile
 
-### Tela 1 — Dashboard
+### Tela Inicial — Login
 
-Mostra o mapa de NDVI da propriedade com escala de cores (verde = saudável,
-amarelo = atenção, vermelho = crítico), além dos indicadores de temperatura,
-umidade do solo e precipitação acumulada.
+Autenticação segura do produtor (login com hash SHA-256 no backend) com tratamento de credenciais inválidas e controle de sessão local.
 
-### Tela 2 — Alertas
+### Tela 1 — Dashboard (Lavoura)
 
-Lista de alertas ativos com ícone de severidade (🔴 alta, 🟡 média, 🟢 baixa),
-mensagem descritiva e botão para marcar como lido.
+Mostra o mapa de NDVI da propriedade com escala de cores (verde = saudável, amarelo = atenção, vermelho = crítico), além dos indicadores rápidos de clima e um carrossel de métricas interativo com detalhes ao toque.
 
-### Tela 3 — Sensores IoT
+### Tela 2 — Histórico NDVI
 
-Lista os sensores cadastrados na propriedade com a última leitura e uma barra
-de progresso indicando o nível atual em relação aos limites saudáveis.
+Gráfico e histórico detalhado das coletas de NDVI para acompanhar a evolução da saúde da vegetação ao longo do tempo.
+
+### Tela 3 — Alertas
+
+Lista de alertas ativos de seca/praga com recomendação de ação, severidade (🔴 alta, 🟡 média, 🟢 baixa) e botão para marcar como lido.
+
+### Tela 4 — Sensores IoT
+
+Lista os sensores cadastrados na propriedade com a última leitura e uma barra de progresso indicando o nível atual em relação aos limites saudáveis.
 
 ---
 
 ## 8. Simulação IoT
 
-Dispositivo simulado (script Python em [`iot/simulador_sensor.py`](../iot/simulador_sensor.py))
-que envia leituras periódicas de umidade do solo para o endpoint
-`POST /api/sensores/dados`, gerando valores entre 15% e 35% com variação gradual
-ao longo do tempo.
+Dispositivo simulado (script Python em [`iot/simulador.py`](../iot/simulador.py)) que envia leituras periódicas de umidade do solo para o endpoint `POST /api/sensores/dados`, gerando valores entre 15% e 35% com variação gradual ao longo do tempo.
 
 ---
 
