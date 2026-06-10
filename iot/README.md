@@ -4,15 +4,16 @@
 
 ## Qual sensor é simulado
 
-Sensor de **umidade do solo** instalado na propriedade rural. É o
-dispositivo IoT mais relevante para o pequeno produtor: barato, de fácil
-instalação e essencial para detectar estresse hídrico da lavoura.
+Sensor de **umidade do solo** instalado na propriedade rural (simulando um
+sensor capacitivo de campo). É o dispositivo IoT mais relevante para o pequeno
+produtor: barato, de fácil instalação e essencial para detectar estresse
+hídrico da lavoura.
 
 ## O que ele mede
 
 Percentual de umidade volumétrica do solo, na faixa de **15% a 35%**,
-com variação gradual entre leituras (random walk de até ±1.5 ponto),
-imitando o comportamento real do solo ao longo do dia.
+com variação gradual entre leituras (random walk), imitando o comportamento
+real do solo ao longo do dia.
 
 ## Como influencia o sistema
 
@@ -22,7 +23,8 @@ imitando o comportamento real do solo ao longo do dia.
 3. A engine de risco (`POST /api/alertas/verificar`) cruza a umidade do
    solo com a precipitação acumulada dos satélites: umidade **< 20%** com
    chuva acumulada **< 10mm em 15 dias** dispara o **alerta de seca**,
-   que aparece na tela de Alertas do produtor.
+   que aparece na tela de Alertas do produtor. O dado do dispositivo IoT
+   vira decisão automática de alerta.
 
 ## Como executar
 
@@ -37,7 +39,23 @@ python3 iot/simulador.py --url http://localhost:8080 \
     --propriedade 1 --intervalo 2 --leituras 20
 ```
 
-Requer apenas Python 3 (sem dependências externas).
+Requer apenas Python 3 (sem dependências externas — usa `urllib` da stdlib).
+
+## Contrato enviado
+
+O endpoint define a data/hora no servidor, então o corpo é apenas:
+
+```json
+{ "tipo": "UMIDADE_SOLO", "valor": 18.4, "propriedadeId": 1 }
+```
+
+`tipo` aceita os valores do enum `TipoSensor`: `UMIDADE_SOLO`, `TEMPERATURA`,
+`PLUVIOMETRO`.
+
+## Verificando
+
+As leituras aparecem em `GET /api/sensores?propriedadeId=1` e na tela de
+Sensores do app.
 
 ## Exemplo de saída
 

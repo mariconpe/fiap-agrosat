@@ -75,17 +75,50 @@ src/main/java/br/com/fiap/agrosat/
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
+| `POST` | `/api/auth/login` | Login do produtor (senha por hash SHA-256) |
+| `POST` | `/api/produtores` | Cadastrar produtor |
 | `GET` | `/api/propriedades` | Listar propriedades |
 | `POST` | `/api/propriedades` | Cadastrar propriedade |
 | `GET` | `/api/propriedades/{id}/ndvi` | Último NDVI + status |
 | `GET` | `/api/propriedades/{id}/alertas` | Alertas ativos |
 | `POST` | `/api/sensores/dados` | Registrar leitura IoT |
 | `POST` | `/api/alertas/verificar` | Rodar engine de risco |
-| `POST` | `/api/auth/login` | Autenticar produtor (senha com hash SHA-256) |
 
 ## Documentação
 
 - [Documento de concepção](docs/concepcao.md)
+- [Segurança (login + práticas + JWT projetado)](docs/seguranca.md)
+
+## Banco de dados
+
+Scripts em [`banco/`](banco/): `schema.sql` (CREATE TABLE com PK/FK no dialeto H2),
+`seed.sql` (dados de demonstração) e `consultas.sql` (3 consultas de exemplo).
+Em execução, o banco também pode ser inspecionado no H2 Console em
+http://localhost:8080/h2-console (JDBC URL `jdbc:h2:mem:agrosat`, user `sa`, sem senha).
+
+## Segurança
+
+Login com senha criptografada em `POST /api/auth/login` (compara hash SHA-256,
+nunca a senha em texto puro). Práticas aplicadas: validação de entrada (Bean
+Validation), criptografia de senha, proteção contra SQL Injection (consultas
+parametrizadas do JPA) e CORS controlado. Detalhes em [`docs/seguranca.md`](docs/seguranca.md).
+
+```bash
+# testar login (após subir a aplicação)
+curl -i -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"joao@agrosat.com.br","senha":"123456"}'   # 200
+```
+
+## Simulação IoT
+
+Sensor simulado de umidade do solo em [`iot/`](iot/). Envia leituras para
+`POST /api/sensores/dados`, alimentando a regra de seca. Sem dependências
+externas (Python 3 stdlib).
+
+```bash
+python3 iot/simulador.py --leituras 10
+```
 
 ## Equipe
 

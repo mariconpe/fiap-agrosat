@@ -1,0 +1,13 @@
+GLOBAL SOLUTION 2026/1 - 4o ANO ENGENHARIA DE SOFTWARE - FIAP
+Projeto: AgroSat
+
+GRUPO: [preencher nome do grupo]
+
+INTEGRANTES:
+- RM552386 - Guilherme Mazur
+- RM552413 - Marina Pereira
+- RM86810  - Bruno Lago
+- RM97833  - Eduardo Savio
+- RM552322 - Gustavo Vieira da Silva
+
+LINK DO VIDEO PITCH: [preencher URL do YouTube / Google Drive / Vimeo]
