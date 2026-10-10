@@ -24,6 +24,9 @@ public class Sensor {
     @Column(name = "data_hora", nullable = false)
     private LocalDateTime dataHora;
 
+    @Column(nullable = false, length = 40)
+    private String origem = "API";
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "propriedade_id", nullable = false)
     private Propriedade propriedade;
@@ -37,6 +40,10 @@ public class Sensor {
         this.dataHora = dataHora;
         this.propriedade = propriedade;
     }
+    public Sensor(TipoSensor tipo, BigDecimal valor, LocalDateTime dataHora, String origem, Propriedade propriedade) {
+        this(tipo, valor, dataHora, propriedade);
+        this.origem = origem;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -49,6 +56,8 @@ public class Sensor {
 
     public LocalDateTime getDataHora() { return dataHora; }
     public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
+    public String getOrigem() { return origem; }
+    public void setOrigem(String origem) { this.origem = origem; }
 
     public Propriedade getPropriedade() { return propriedade; }
     public void setPropriedade(Propriedade propriedade) { this.propriedade = propriedade; }

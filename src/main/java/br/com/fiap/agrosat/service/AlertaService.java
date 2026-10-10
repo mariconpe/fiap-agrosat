@@ -34,7 +34,7 @@ public class AlertaService {
 
     @Transactional(readOnly = true)
     public List<AlertaResponse> listarAtivos(Long propriedadeId) {
-        return repository.findByPropriedade_IdAndLidaFalseOrderByDataCriacaoDesc(
+        return repository.findByPropriedade_IdAndLidaFalseAndResolvidoFalseOrderByDataCriacaoDesc(
                         propriedadeId)
                 .stream()
                 .map(AlertaResponse::fromEntity)
@@ -60,8 +60,18 @@ public class AlertaService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Propriedade", propriedadeId));
 
+        Alerta existente = repository.findByPropriedade_IdAndResolvidoFalse(propriedadeId)
+                .stream().filter(a -> a.getTipo() == tipo).findFirst().orElse(null);
+        if (existente != null) return AlertaResponse.fromEntity(existente);
         Alerta alerta = new Alerta(tipo, severidade, mensagem, propriedade);
         Alerta salvo = repository.save(alerta);
         return AlertaResponse.fromEntity(salvo);
+    }
+
+    @Transactional
+    public void resolverAusentes(Long propriedadeId, java.util.Set<TipoAlerta> presentes) {
+        repository.findByPropriedade_IdAndResolvidoFalse(propriedadeId).stream()
+                .filter(a -> !presentes.contains(a.getTipo()))
+                .forEach(a -> a.setResolvido(true));
     }
 }

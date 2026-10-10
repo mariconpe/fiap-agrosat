@@ -11,6 +11,7 @@ public class AlertaResponse {
     private String severidade;
     private String mensagem;
     private boolean lida;
+    private boolean resolvido;
     private LocalDateTime dataCriacao;
     private String propriedadeNome;
 
@@ -21,6 +22,7 @@ public class AlertaResponse {
         dto.severidade = a.getSeveridade().name();
         dto.mensagem = a.getMensagem();
         dto.lida = a.isLida();
+        dto.resolvido = a.isResolvido();
         dto.dataCriacao = a.getDataCriacao();
         dto.propriedadeNome = a.getPropriedade() != null ? a.getPropriedade().getNome() : null;
         return dto;
@@ -31,6 +33,7 @@ public class AlertaResponse {
     public String getSeveridade() { return severidade; }
     public String getMensagem() { return mensagem; }
     public boolean isLida() { return lida; }
+    public boolean isResolvido() { return resolvido; }
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public String getPropriedadeNome() { return propriedadeNome; }
 }

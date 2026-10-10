@@ -3,7 +3,8 @@
 
 import type { Propriedade, NdviResponse, Alerta, Sensor, Produtor } from "../types";
 
-const BASE_URL = "http://localhost:8080/api";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080/api";
+export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
 
 async function fetchOrMock<T>(
   url: string,
@@ -18,6 +19,8 @@ async function fetchOrMock<T>(
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch {
+    if (!DEMO_MODE) throw new Error("Não foi possível conectar à API AgroSat.");
+
     console.log(`[mock] usando dados locais para ${url}`);
     return mock;
   }
@@ -92,7 +95,7 @@ export async function listarAlertas(
   propriedadeId: number
 ): Promise<Alerta[]> {
   return fetchOrMock(
-    `/propriedades/${propriedadeId}/alertas`,
+    `/alertas?propriedadeId=${propriedadeId}`,
     MOCK_ALERTAS
   );
 }
@@ -105,6 +108,20 @@ export async function verificarRiscos(
     { alertas: MOCK_ALERTAS },
     { method: "POST" }
   );
+}
+
+export interface Indicadores {
+  umidadeAtual: number | null;
+  chuvaAcumulada15Dias: number;
+  temperaturaMaxima7Dias: number | null;
+  estadoAmbiente: string;
+}
+export interface MedicaoNdvi { ndvi: number; dataColeta: string }
+export async function consultarIndicadores(id: number): Promise<Indicadores> {
+  return fetchOrMock(`/propriedades/${id}/indicadores`, { umidadeAtual: null, chuvaAcumulada15Dias: 0, temperaturaMaxima7Dias: null, estadoAmbiente: "SEM_DADOS" });
+}
+export async function historicoNdvi(id: number): Promise<MedicaoNdvi[]> {
+  return fetchOrMock(`/propriedades/${id}/ndvi/historico`, []);
 }
 
 export async function marcarAlertaComoLida(alertaId: number): Promise<Alerta> {
@@ -196,7 +213,7 @@ export async function login(email: string, senha: string): Promise<Produtor> {
     }
 
     // Fallback mock apenas para a conta de demonstração
-    if (email === MOCK_PRODUTOR_EMAIL && senha === MOCK_PRODUTOR_SENHA) {
+    if (DEMO_MODE && email === MOCK_PRODUTOR_EMAIL && senha === MOCK_PRODUTOR_SENHA) {
       console.log("[mock] login aceito com conta de demonstração");
       return { ...MOCK_PRODUTOR };
     }

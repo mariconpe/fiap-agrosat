@@ -38,6 +38,7 @@ def enviar_leitura(url_base: str, propriedade_id: int, umidade: float) -> bool:
         "tipo": "UMIDADE_SOLO",
         "valor": umidade,
         "propriedadeId": propriedade_id,
+        "origem": "SIMULADOR_IOT",
     }).encode()
 
     requisicao = urllib.request.Request(
@@ -74,7 +75,7 @@ def main() -> int:
                         help="Total de leituras a enviar (padrão: 10)")
     argumentos = parser.parse_args()
 
-    print(f"🛰️  Simulador AgroSat — sensor de umidade do solo")
+    print("🛰️  Simulador AgroSat — sensor de umidade do solo")
     print(f"    API: {argumentos.url} | propriedade: {argumentos.propriedade} "
           f"| {argumentos.leituras} leituras a cada {argumentos.intervalo}s\n")
 

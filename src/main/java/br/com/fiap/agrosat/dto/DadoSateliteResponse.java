@@ -15,6 +15,7 @@ public class DadoSateliteResponse {
     private BigDecimal tempMax;
     private LocalDate dataColeta;
     private String propriedadeNome;
+    private String origem;
 
     public static DadoSateliteResponse fromEntity(DadoSatelite d) {
         DadoSateliteResponse r = new DadoSateliteResponse();
@@ -27,6 +28,7 @@ public class DadoSateliteResponse {
         r.dataColeta = d.getDataColeta();
         r.propriedadeNome = d.getPropriedade() != null
                 ? d.getPropriedade().getNome() : null;
+        r.origem = d.getOrigem();
         return r;
     }
 
@@ -38,4 +40,5 @@ public class DadoSateliteResponse {
     public BigDecimal getTempMax() { return tempMax; }
     public LocalDate getDataColeta() { return dataColeta; }
     public String getPropriedadeNome() { return propriedadeNome; }
+    public String getOrigem() { return origem; }
 }

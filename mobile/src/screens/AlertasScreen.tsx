@@ -30,6 +30,7 @@ export default function AlertasScreen() {
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
   const [verificando, setVerificando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
   const { setNaoLidos } = useAlertas();
 
   const atualizarNaoLidos = useCallback(
@@ -40,32 +41,47 @@ export default function AlertasScreen() {
   );
 
   const carregarAlertas = useCallback(async () => {
-    const dados = await listarAlertas(PROPRIEDADE_ID);
-    setAlertas(dados);
-    atualizarNaoLidos(dados);
-    setCarregando(false);
-    setRecarregando(false);
+    try {
+      const dados = await listarAlertas(PROPRIEDADE_ID);
+
+      setErro(null); setAlertas(dados); atualizarNaoLidos(dados);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao carregar alertas.");
+    }
+    finally {
+      setCarregando(false); setRecarregando(false);
+    }
   }, [atualizarNaoLidos]);
 
   useEffect(() => {
-    carregarAlertas();
+    void carregarAlertas();
   }, [carregarAlertas]);
 
   const executarVerificacao = async () => {
     setVerificando(true);
-    const resultado = await verificarRiscos(PROPRIEDADE_ID);
-    setAlertas(resultado.alertas);
-    atualizarNaoLidos(resultado.alertas);
-    setVerificando(false);
-    Haptics.notificationAsync(
-      resultado.alertas.some((alerta) => !alerta.lida)
+    let persistidos: Alerta[] = [];
+
+    try {
+      await verificarRiscos(PROPRIEDADE_ID);
+      persistidos = await listarAlertas(PROPRIEDADE_ID);
+      setAlertas(persistidos);
+      atualizarNaoLidos(persistidos);
+      setErro(null);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao verificar riscos.");
+    } finally {
+      setVerificando(false);
+    }
+
+    void Haptics.notificationAsync(
+      persistidos.some((alerta) => !alerta.lida)
         ? Haptics.NotificationFeedbackType.Warning
         : Haptics.NotificationFeedbackType.Success
     );
   };
 
   async function marcarComoLido(alerta: Alerta) {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const atualizados = alertas.map((a) =>
       a.id === alerta.id ? { ...a, lida: true } : a
     );
@@ -75,16 +91,16 @@ export default function AlertasScreen() {
   }
 
   const naoLidos = alertas.filter((a) => !a.lida).length;
+  let subtituloAlertas = "Nenhum alerta não lido";
+  if (naoLidos > 0) {
+    subtituloAlertas = `${naoLidos} ${naoLidos === 1 ? "não lido" : "não lidos"}`;
+  }
 
   return (
     <View style={styles.container}>
       <ScreenHeader
         titulo="Alertas"
-        subtitulo={
-          naoLidos === 0
-            ? "Nenhum alerta não lido"
-            : `${naoLidos} ${naoLidos === 1 ? "não lido" : "não lidos"}`
-        }
+        subtitulo={subtituloAlertas}
         acessorio={
           <Pressable
             accessibilityRole="button"
@@ -104,6 +120,7 @@ export default function AlertasScreen() {
           </Pressable>
         }
       />
+      {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
       {carregando ? (
         <View style={styles.listaConteudo}>
@@ -128,7 +145,7 @@ export default function AlertasScreen() {
               tintColor={colors.brand}
               onRefresh={() => {
                 setRecarregando(true);
-                carregarAlertas();
+                void carregarAlertas();
               }}
             />
           }
@@ -155,10 +172,10 @@ export default function AlertasScreen() {
 function CartaoAlerta({
   alerta,
   aoMarcarLido,
-}: {
+}: Readonly<{
   alerta: Alerta;
   aoMarcarLido: () => void;
-}) {
+}>) {
   const severidade = SEVERIDADE[alerta.severidade];
   const isSeca = alerta.tipo === "SECA";
 
@@ -232,6 +249,7 @@ function formatarDataHora(dataIso: string): string {
 // ----- estilos -----
 
 const styles = StyleSheet.create({
+  erro: { color: colors.critical, marginHorizontal: spacing.lg, marginBottom: spacing.md },
   container: { flex: 1, backgroundColor: colors.background },
 
   botaoVerificar: {

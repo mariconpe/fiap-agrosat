@@ -17,4 +17,5 @@ public interface DadoSateliteRepository extends JpaRepository<DadoSatelite, Long
 
     List<DadoSatelite> findByPropriedade_IdAndDataColetaAfterOrderByDataColetaAsc(
             Long propriedadeId, LocalDate data);
+    List<DadoSatelite> findByPropriedade_IdAndTipoOrderByDataColetaAscIdAsc(Long propriedadeId, TipoDadoSatelite tipo);
 }

@@ -61,8 +61,9 @@ exclusivos de agências espaciais agora podem chegar ao celular de quem planta.
                     └────────────────┘
 ```
 
-*As partes não precisam estar integradas — cada frente entrega sua prova de
-conceito de forma independente, conforme orientação do desafio.*
+O aplicativo opera integrado à API por padrão. O H2 usa `create-drop` e recria
+as tabelas a cada inicialização. Clima e NDVI são dados de demonstração enviados
+pela API, não integrações ao vivo com provedores de satélite.
 
 ---
 
@@ -123,12 +124,24 @@ conceito de forma independente, conforme orientação do desafio.*
 | `POST` | `/api/sensores/dados` | Registrar leitura do sensor IoT |
 | `PUT` | `/api/alertas/{id}/lida` | Marcar alerta como lido |
 | `POST` | `/api/alertas/verificar` | Executar verificação de riscos |
+| `GET` | `/api/alertas?propriedadeId={id}` | Histórico persistido de alertas |
+| `GET` | `/api/propriedades/{id}/indicadores` | Indicadores agregados atuais |
+| `GET` | `/api/propriedades/{id}/ndvi/historico` | Série cronológica de NDVI |
+| `GET` | `/api/dados/exportar?propriedadeId={id}` | Exportar leituras de sensores processadas em CSV |
 
 ### Regras de Risco
 
 - **Seca:** precipitação acumulada < 10mm nos últimos 15 dias **E** umidade do
   solo < 20%
 - **Praga:** NDVI caiu > 0.15 em 7 dias **E** temperatura máxima > 30°C
+
+Os limites de validação e de risco são experimentais e devem ser calibrados
+com dados locais e orientação agronômica antes de uso operacional. Leituras
+recebem origem `API` por padrão; o simulador usa `SIMULADOR_IOT`. O timestamp
+de sensor é tratado como UTC quando informado sem fuso, e o horário de ingestão
+é UTC quando omitido. O mapa do app é ilustrativo enquanto não houver geometria
+do talhão. Configure `EXPO_PUBLIC_API_URL` e habilite `EXPO_PUBLIC_DEMO_MODE`
+apenas para usar respostas de demonstração sem conexão.
 
 ---
 

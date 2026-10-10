@@ -12,6 +12,7 @@ public class SensorResponse {
     private BigDecimal valor;
     private LocalDateTime dataHora;
     private Long propriedadeId;
+    private String origem;
 
     public static SensorResponse fromEntity(Sensor s) {
         SensorResponse dto = new SensorResponse();
@@ -20,6 +21,7 @@ public class SensorResponse {
         dto.valor = s.getValor();
         dto.dataHora = s.getDataHora();
         dto.propriedadeId = s.getPropriedadeId();
+        dto.origem = s.getOrigem();
         return dto;
     }
 
@@ -28,4 +30,5 @@ public class SensorResponse {
     public BigDecimal getValor() { return valor; }
     public LocalDateTime getDataHora() { return dataHora; }
     public Long getPropriedadeId() { return propriedadeId; }
+    public String getOrigem() { return origem; }
 }

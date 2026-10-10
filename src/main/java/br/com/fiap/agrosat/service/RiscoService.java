@@ -72,6 +72,9 @@ public class RiscoService {
         AlertaResponse praga = verificarPraga(propriedade);
         if (praga != null) gerados.add(praga);
 
+        alertaService.resolverAusentes(propriedadeId, gerados.stream()
+                .map(a -> TipoAlerta.valueOf(a.getTipo())).collect(java.util.stream.Collectors.toSet()));
+
         return gerados;
     }
 
@@ -102,13 +105,11 @@ public class RiscoService {
         }
 
         // pega a leitura mais recente de umidade do solo
-        List<Sensor> sensores = sensorRepository.findByPropriedade_IdAndTipo(
-                propId, TipoSensor.UMIDADE_SOLO);
-        if (sensores.isEmpty()) {
+        Sensor ultimoSensor = sensorRepository.findTopByPropriedade_IdAndTipoOrderByDataHoraDescIdDesc(
+                propId, TipoSensor.UMIDADE_SOLO).orElse(null);
+        if (ultimoSensor == null) {
             return null; // sem sensor, não dá pra avaliar
         }
-
-        Sensor ultimoSensor = sensores.get(0);
         if (ultimoSensor.getValor().compareTo(LIMITE_UMIDADE_SOLO) >= 0) {
             return null; // solo ainda está úmido
         }

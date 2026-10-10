@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api")
@@ -51,5 +52,18 @@ public class SensorController {
             @Valid @RequestBody DadoSateliteRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(dadoSateliteService.registrar(request));
+    }
+
+    @GetMapping(value = "/dados/exportar", produces = "text/csv")
+    @Operation(summary = "Exportar leituras processadas de uma propriedade em CSV")
+    public ResponseEntity<String> exportar(@RequestParam Long propriedadeId) {
+        StringBuilder csv = new StringBuilder("tipo,data,valor,origem,validacao\n");
+        java.util.Set<String> vistos = new java.util.HashSet<>();
+        sensorService.listarEntidades(propriedadeId).forEach(s -> {
+            String chave = s.getTipo() + "|" + s.getDataHora() + "|" + s.getValor() + "|" + s.getOrigem();
+            String validacao = vistos.add(chave) ? "VALIDO" : "DUPLICADO";
+            csv.append(s.getTipo()).append(',').append(s.getDataHora()).append(',').append(s.getValor()).append(',').append(s.getOrigem()).append(',').append(validacao).append('\n');
+        });
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv; charset=utf-8")).body(csv.toString());
     }
 }

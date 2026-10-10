@@ -33,6 +33,9 @@ public class Alerta {
     @Column(nullable = false)
     private boolean lida = false;
 
+    @Column(nullable = false)
+    private boolean resolvido = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "propriedade_id", nullable = false)
     private Propriedade propriedade;
@@ -64,6 +67,8 @@ public class Alerta {
 
     public boolean isLida() { return lida; }
     public void setLida(boolean lida) { this.lida = lida; }
+    public boolean isResolvido() { return resolvido; }
+    public void setResolvido(boolean resolvido) { this.resolvido = resolvido; }
 
     public Propriedade getPropriedade() { return propriedade; }
     public void setPropriedade(Propriedade propriedade) { this.propriedade = propriedade; }

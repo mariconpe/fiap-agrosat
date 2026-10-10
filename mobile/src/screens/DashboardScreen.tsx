@@ -19,8 +19,8 @@ import {
   type ParamListBase,
 } from "@react-navigation/native";
 
-import { consultarNdvi, listarPropriedades, listarSensores } from "../services/api";
-import type { NdviResponse, Propriedade, Sensor } from "../types";
+import { consultarNdvi, listarPropriedades, listarSensores, consultarIndicadores, historicoNdvi, listarAlertas } from "../services/api";
+import type { Alerta, NdviResponse, Propriedade, Sensor } from "../types";
 import InsightSheet, { type InsightConteudo } from "../components/InsightSheet";
 import ScreenHeader from "../components/ScreenHeader";
 import SectionHeader from "../components/SectionHeader";
@@ -57,18 +57,32 @@ export default function DashboardScreen() {
   const [insightAtivo, setInsightAtivo] = useState<InsightConteudo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
+  const [indicadores, setIndicadores] = useState<{ umidadeAtual: number | null; chuvaAcumulada15Dias: number; temperaturaMaxima7Dias: number | null } | null>(null);
+  const [ndviHistorico, setNdviHistorico] = useState<{ ndvi: number; dataColeta: string }[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  const [alertasHistorico, setAlertasHistorico] = useState<Alerta[]>([]);
 
   const carregarDados = useCallback(async () => {
+    try {
     const propriedades = await listarPropriedades();
     if (propriedades.length > 0) {
       const principal = propriedades[0];
       setPropriedade(principal);
-      const [ndviData, sensores] = await Promise.all([
+      const [ndviData, sensores, indicadoresData, historico, alertas] = await Promise.all([
         consultarNdvi(principal.id),
         listarSensores(principal.id),
+        consultarIndicadores(principal.id),
+        historicoNdvi(principal.id),
+        listarAlertas(principal.id),
       ]);
       setNdvi(ndviData);
       setUmidadeSerie(extrairSerieUmidade(sensores));
+      setIndicadores(indicadoresData);
+      setNdviHistorico(historico);
+      setAlertasHistorico(alertas);
+    }
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao carregar dados da API.");
     }
     setHoraAtualizacao(
       new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
@@ -78,11 +92,11 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    carregarDados();
+    void carregarDados();
   }, [carregarDados]);
 
   function abrirInsight(insight: InsightConteudo) {
-    Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     setInsightAtivo(insight);
   }
 
@@ -100,7 +114,9 @@ export default function DashboardScreen() {
   const status = STATUS_NDVI[ndvi?.status ?? "SEM_DADOS"];
   const valorNdvi = ndvi?.ndvi ?? null;
   const alertasAtivos = propriedade?.alertasAtivos ?? 0;
-  const umidadeAtual = umidadeSerie.length > 0 ? umidadeSerie[umidadeSerie.length - 1] : null;
+  const umidadeAtual = indicadores?.umidadeAtual ?? (umidadeSerie.length > 0 ? umidadeSerie.at(-1) : null);
+  const ndviSeteDias = ndviHistorico.filter((medicao) => new Date(medicao.dataColeta).getTime() >= Date.now() - 7 * 86400000);
+  const variacaoNdvi = ndviSeteDias.length >= 2 ? ndviSeteDias.at(-1)!.ndvi - ndviSeteDias[0]!.ndvi : null;
   const umidadeCritica = umidadeAtual != null && umidadeAtual < 20;
 
   return (
@@ -113,7 +129,7 @@ export default function DashboardScreen() {
           tintColor={colors.brand}
           onRefresh={() => {
             setRecarregando(true);
-            carregarDados();
+            void carregarDados();
           }}
         />
       }
@@ -125,6 +141,7 @@ export default function DashboardScreen() {
           propriedade?.areaHectares
         )} ha`}
       />
+      {erro ? <Text style={styles.heroNota}>{erro}</Text> : <Text style={styles.heroNota}>Dados {process.env.EXPO_PUBLIC_DEMO_MODE === "true" ? "offline de demonstração" : "integrados à API"}</Text>}
 
       {/* talhão visto do satélite, tingido pelo status do NDVI */}
       <View style={styles.heroCard}>
@@ -166,7 +183,7 @@ export default function DashboardScreen() {
             accessibilityRole="button"
             accessibilityLabel="Abrir histórico de NDVI"
             onPress={() => {
-              Haptics.selectionAsync();
+              void Haptics.selectionAsync();
               abrirHistoricoNdvi();
             }}
             style={({ pressed }) => [styles.chipGrande, pressed && styles.pressionado]}
@@ -187,7 +204,7 @@ export default function DashboardScreen() {
       </View>
 
       <Text style={styles.heroNota}>
-        Talhão principal monitorado por satélite. A área tingida mostra o
+        Mapa ilustrativo, pois a propriedade ainda não possui geometria do talhão. A área tingida mostra o
         status do vigor da vegetação: acima de 0,60 a lavoura está saudável.
       </Text>
 
@@ -210,6 +227,9 @@ export default function DashboardScreen() {
           <Ionicons name="chevron-forward" size={16} color={colors.critical} />
         </Pressable>
       )}
+      <Text style={styles.heroNota}>
+        Alertas persistidos: {alertasHistorico.filter((a) => a.tipo === "SECA").length} seca · {alertasHistorico.filter((a) => a.tipo === "PRAGA").length} praga · {alertasHistorico.filter((a) => a.severidade === "ALTA").length} alta · {alertasHistorico.filter((a) => !a.lida).length} não lidos.
+      </Text>
 
       {/* hoje */}
       <SectionHeader titulo="Hoje" meta={dataDeHoje()} />
@@ -252,7 +272,7 @@ export default function DashboardScreen() {
 
         <CartaoHoje
           titulo="Chuva"
-          valor="3 mm"
+          valor={indicadores ? `${indicadores.chuvaAcumulada15Dias.toFixed(0)} mm` : "—"}
           corValor={colors.critical}
           nota="Acumulado em 15 dias"
           rodape="Mínimo saudável: 10 mm"
@@ -260,7 +280,7 @@ export default function DashboardScreen() {
         />
         <CartaoHoje
           titulo="Temperatura"
-          valor="32°C"
+          valor={indicadores?.temperaturaMaxima7Dias != null ? `${indicadores.temperaturaMaxima7Dias.toFixed(0)}°C` : "—"}
           corValor={colors.warning}
           nota="Máxima de hoje"
           rodape="Mínima de 22°C · alerta acima de 30°C"
@@ -268,7 +288,7 @@ export default function DashboardScreen() {
         />
         <CartaoHoje
           titulo="NDVI em 7 dias"
-          valor="−0,17"
+          valor={variacaoNdvi != null ? variacaoNdvi.toFixed(2).replace("-", "−") : "—"}
           corValor={colors.critical}
           nota="Variação do vigor"
           rodape="Queda além do limite de 0,15"
@@ -444,14 +464,14 @@ function CartaoHoje({
   nota,
   rodape,
   aoTocar,
-}: {
+}: Readonly<{
   titulo: string;
   valor: string;
   corValor: string;
   nota: string;
   rodape: string;
   aoTocar: () => void;
-}) {
+}>) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -470,7 +490,7 @@ function CartaoHoje({
   );
 }
 
-function GraficoBarras({ valores, cor }: { valores: number[]; cor: string }) {
+function GraficoBarras({ valores, cor }: Readonly<{ valores: number[]; cor: string }>) {
   const isReducedMotion = useReducedMotion();
   const entrada = useRef(
     valores.map(() => new Animated.Value(0))
@@ -538,11 +558,11 @@ function LinhaInfo({
   icone,
   rotulo,
   valor,
-}: {
+}: Readonly<{
   icone: keyof typeof Ionicons.glyphMap;
   rotulo: string;
   valor: string;
-}) {
+}>) {
   return (
     <View style={styles.linhaInfo}>
       <Ionicons name={icone} size={18} color={colors.inkSecondary} />
@@ -554,7 +574,7 @@ function LinhaInfo({
   );
 }
 
-function DashboardSkeleton({ paddingTop }: { paddingTop: number }) {
+function DashboardSkeleton({ paddingTop }: Readonly<{ paddingTop: number }>) {
   const isReducedMotion = useReducedMotion();
   const brilho = useRef(new Animated.Value(1)).current;
 

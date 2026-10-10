@@ -37,7 +37,7 @@ public class PropriedadeService {
     public List<PropriedadeResponse> listar() {
         return repository.findAll().stream()
                 .map(p -> PropriedadeResponse.fromEntity(p,
-                        alertaRepository.countByPropriedade_IdAndLidaFalse(p.getId())))
+                        alertaRepository.countByPropriedade_IdAndLidaFalseAndResolvidoFalse(p.getId())))
                 .toList();
     }
 
@@ -69,7 +69,7 @@ public class PropriedadeService {
     public PropriedadeResponse buscarPorId(Long id) {
         Propriedade p = repository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Propriedade", id));
-        long alertasAtivos = alertaRepository.countByPropriedade_IdAndLidaFalse(id);
+        long alertasAtivos = alertaRepository.countByPropriedade_IdAndLidaFalseAndResolvidoFalse(id);
         return PropriedadeResponse.fromEntity(p, alertasAtivos);
     }
 

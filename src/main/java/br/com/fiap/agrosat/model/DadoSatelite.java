@@ -33,6 +33,9 @@ public class DadoSatelite {
     @Column(name = "data_coleta", nullable = false)
     private LocalDate dataColeta;
 
+    @Column(nullable = false, length = 40)
+    private String origem = "API";
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "propriedade_id", nullable = false)
     private Propriedade propriedade;
@@ -71,6 +74,8 @@ public class DadoSatelite {
 
     public LocalDate getDataColeta() { return dataColeta; }
     public void setDataColeta(LocalDate dataColeta) { this.dataColeta = dataColeta; }
+    public String getOrigem() { return origem; }
+    public void setOrigem(String origem) { this.origem = origem; }
 
     public Propriedade getPropriedade() { return propriedade; }
     public void setPropriedade(Propriedade propriedade) { this.propriedade = propriedade; }

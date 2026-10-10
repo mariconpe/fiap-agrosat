@@ -14,11 +14,15 @@ public class DadoSateliteService {
 
     private final DadoSateliteRepository repository;
     private final PropriedadeRepository propriedadeRepository;
+    private final RiscoService riscoService;
+    private final ProcessamentoService processamentoService;
 
     public DadoSateliteService(DadoSateliteRepository repository,
-                               PropriedadeRepository propriedadeRepository) {
+                               PropriedadeRepository propriedadeRepository, RiscoService riscoService, ProcessamentoService processamentoService) {
         this.repository = repository;
         this.propriedadeRepository = propriedadeRepository;
+        this.riscoService = riscoService;
+        this.processamentoService = processamentoService;
     }
 
     @Transactional
@@ -26,6 +30,7 @@ public class DadoSateliteService {
         Propriedade propriedade = propriedadeRepository.findById(request.getPropriedadeId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Propriedade", request.getPropriedadeId()));
+        processamentoService.validarSatelite(request);
 
         DadoSatelite dado = new DadoSatelite(
                 request.getTipo(),
@@ -38,6 +43,9 @@ public class DadoSateliteService {
         );
 
         DadoSatelite salvo = repository.save(dado);
+        salvo.setOrigem(request.getOrigem() == null ? "API" : request.getOrigem());
+        salvo = repository.save(salvo);
+        riscoService.verificarRiscos(propriedade.getId());
         return DadoSateliteResponse.fromEntity(salvo);
     }
 }

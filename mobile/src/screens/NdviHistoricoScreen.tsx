@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, radius, shadow, spacing } from "../theme";
 import type { RootStackParamList } from "../../App";
+import { historicoNdvi } from "../services/api";
 
 // ---------------------------------------------------------------
 // Tipos
@@ -26,20 +27,6 @@ interface PontoNdvi {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NdviHistorico">;
 
 // ---------------------------------------------------------------
-// Dados mock (8 pontos, queda de 0.68 a 0.41 nos ultimos 28 dias)
-// ---------------------------------------------------------------
-
-const gerarSerie = (): PontoNdvi[] => {
-  const valores = [0.68, 0.65, 0.61, 0.57, 0.52, 0.47, 0.44, 0.41];
-  const hoje = new Date();
-  return valores.map((valor, i) => {
-    const data = new Date(hoje);
-    data.setDate(hoje.getDate() - 28 + i * 4);
-    return { data, valor };
-  });
-};
-
-const SERIE = gerarSerie();
 const VALOR_MAX = 1.0;
 
 // ---------------------------------------------------------------
@@ -62,11 +49,16 @@ const formatarDdMm = (data: Date): string =>
 export default function NdviHistoricoScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
-
-  const variacaoSeteDias =
-    SERIE[SERIE.length - 1].valor - SERIE[SERIE.length - 3].valor;
-  const variacaoFormatada = variacaoSeteDias.toFixed(2).replace(".", ",");
-  const isQueda = variacaoSeteDias < 0;
+  const [serie, setSerie] = useState<PontoNdvi[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  useEffect(() => {
+    historicoNdvi(1).then((dados) => setSerie(dados.map((d) => ({ data: new Date(`${d.dataColeta}T00:00:00`), valor: d.ndvi }))))
+      .catch((e) => setErro(e instanceof Error ? e.message : "Falha ao carregar histórico."));
+  }, []);
+  const recentes = serie.filter((p) => p.data.getTime() >= Date.now() - 7 * 86400000);
+  const variacaoSeteDias = recentes.length >= 2 ? recentes.at(-1)!.valor - recentes[0].valor : null;
+  const variacaoFormatada = variacaoSeteDias == null ? "—" : variacaoSeteDias.toFixed(2).replace(".", ",");
+  const isQueda = variacaoSeteDias != null && variacaoSeteDias < 0;
 
   return (
     <View style={[styles.tela, { paddingTop: insets.top }]}>
@@ -106,7 +98,7 @@ export default function NdviHistoricoScreen() {
 
             {/* Barras */}
             <View style={styles.barrasContainer}>
-              {SERIE.map((ponto, i) => {
+              {serie.map((ponto, i) => {
                 const alturaPercent = ponto.valor / VALOR_MAX;
                 return (
                   <View key={i} style={styles.barraColuna}>
@@ -131,11 +123,13 @@ export default function NdviHistoricoScreen() {
           </View>
         </View>
 
+        {serie.length === 0 ? <Text style={styles.subtitulo}>{erro ?? "Sem medições de NDVI disponíveis."}</Text> : null}
+
         {/* Card resumo variacao */}
         <View style={[styles.card, styles.cardResumo]}>
           <Text style={styles.resumoLabel}>Variacao em 7 dias</Text>
           <Text style={[styles.resumoValor, { color: isQueda ? colors.critical : colors.success }]}>
-            {isQueda ? "" : "+"}{variacaoFormatada}
+            {variacaoSeteDias != null && !isQueda ? "+" : ""}{variacaoFormatada}
           </Text>
         </View>
 

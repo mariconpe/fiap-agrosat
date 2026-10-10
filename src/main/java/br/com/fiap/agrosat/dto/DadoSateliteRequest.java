@@ -24,6 +24,7 @@ public class DadoSateliteRequest {
 
     @NotNull(message = "ID da propriedade é obrigatório")
     private Long propriedadeId;
+    private String origem = "API";
 
     public TipoDadoSatelite getTipo() { return tipo; }
     public void setTipo(TipoDadoSatelite tipo) { this.tipo = tipo; }
@@ -45,4 +46,6 @@ public class DadoSateliteRequest {
 
     public Long getPropriedadeId() { return propriedadeId; }
     public void setPropriedadeId(Long propriedadeId) { this.propriedadeId = propriedadeId; }
+    public String getOrigem() { return origem; }
+    public void setOrigem(String origem) { this.origem = origem; }
 }

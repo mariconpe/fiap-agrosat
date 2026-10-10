@@ -9,4 +9,7 @@ public interface AlertaRepository extends JpaRepository<Alerta, Long> {
     List<Alerta> findByPropriedade_IdOrderByDataCriacaoDesc(Long propriedadeId);
     List<Alerta> findByPropriedade_IdAndLidaFalseOrderByDataCriacaoDesc(Long propriedadeId);
     long countByPropriedade_IdAndLidaFalse(Long propriedadeId);
+    long countByPropriedade_IdAndLidaFalseAndResolvidoFalse(Long propriedadeId);
+    List<Alerta> findByPropriedade_IdAndResolvidoFalse(Long propriedadeId);
+    List<Alerta> findByPropriedade_IdAndLidaFalseAndResolvidoFalseOrderByDataCriacaoDesc(Long propriedadeId);
 }

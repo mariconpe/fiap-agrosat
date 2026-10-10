@@ -17,11 +17,15 @@ public class SensorService {
 
     private final SensorRepository repository;
     private final PropriedadeRepository propriedadeRepository;
+    private final RiscoService riscoService;
+    private final ProcessamentoService processamentoService;
 
     public SensorService(SensorRepository repository,
-                         PropriedadeRepository propriedadeRepository) {
+                         PropriedadeRepository propriedadeRepository, RiscoService riscoService, ProcessamentoService processamentoService) {
         this.repository = repository;
         this.propriedadeRepository = propriedadeRepository;
+        this.riscoService = riscoService;
+        this.processamentoService = processamentoService;
     }
 
     public SensorResponse registrarLeitura(SensorRequest request) {
@@ -29,22 +33,30 @@ public class SensorService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Propriedade", request.getPropriedadeId()));
 
+        processamentoService.validarSensor(request.getTipo(), request.getValor());
         Sensor sensor = new Sensor(
                 request.getTipo(),
                 request.getValor(),
-                LocalDateTime.now(),
+                request.getDataHora() == null ? LocalDateTime.now(java.time.Clock.systemUTC()) : request.getDataHora(),
+                request.getOrigem() == null ? "API" : request.getOrigem(),
                 propriedade
         );
 
         Sensor salvo = repository.save(sensor);
+        riscoService.verificarRiscos(propriedade.getId());
         return SensorResponse.fromEntity(salvo);
     }
 
     @Transactional(readOnly = true)
     public List<SensorResponse> listarPorPropriedade(Long propriedadeId) {
-        return repository.findByPropriedade_IdOrderByDataHoraDesc(propriedadeId)
+        return repository.findByPropriedade_IdOrderByDataHoraDescIdDesc(propriedadeId)
                 .stream()
                 .map(SensorResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Sensor> listarEntidades(Long propriedadeId) {
+        return repository.findByPropriedade_IdOrderByDataHoraDescIdDesc(propriedadeId);
     }
 }
