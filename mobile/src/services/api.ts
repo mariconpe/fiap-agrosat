@@ -1,5 +1,5 @@
 // Serviço de API — conecta no backend Spring Boot
-// Se a API não estiver disponível, usa dados mockados para demo
+// Fallback para dados mockados somente quando o modo demo está habilitado.
 
 import type { Propriedade, NdviResponse, Alerta, Sensor, Produtor } from "../types";
 

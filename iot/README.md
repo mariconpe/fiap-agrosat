@@ -22,11 +22,11 @@ real do solo ao longo do dia.
 1. Cada leitura é enviada para a API via `POST /api/sensores/dados` e
    persistida vinculada à propriedade.
 2. O painel de **Sensores** do app mobile exibe a última leitura.
-3. A engine de risco (`POST /api/alertas/verificar`) cruza a umidade do
-   solo com a precipitação acumulada dos satélites: umidade **< 20%** com
-   chuva acumulada **< 10mm em 15 dias** dispara o **alerta de seca**,
-   que aparece na tela de Alertas do produtor. O dado do dispositivo IoT
-   vira decisão automática de alerta.
+3. Depois de persistir a leitura, a API reavalia automaticamente os riscos da
+   propriedade. Umidade **< 20%** com chuva acumulada **< 10 mm em 15 dias**
+   gera o **alerta de seca**, exibido na tela de Alertas. A rota manual
+   `POST /api/alertas/verificar` continua disponível para uma reavaliação sob
+   demanda.
 
 ## Como executar
 
@@ -45,10 +45,12 @@ Requer apenas Python 3 (sem dependências externas — usa `urllib` da stdlib).
 
 ## Contrato enviado
 
-O endpoint define a data/hora no servidor, então o corpo é apenas:
+O horário pode ser definido pela API no momento da ingestão. O simulador também
+identifica explicitamente a origem da leitura:
 
 ```json
-{ "tipo": "UMIDADE_SOLO", "valor": 18.4, "propriedadeId": 1 }
+{ "tipo": "UMIDADE_SOLO", "valor": 18.4, "propriedadeId": 1,
+  "origem": "SIMULADOR_IOT" }
 ```
 
 `tipo` aceita os valores do enum `TipoSensor`: `UMIDADE_SOLO`, `TEMPERATURA`,
