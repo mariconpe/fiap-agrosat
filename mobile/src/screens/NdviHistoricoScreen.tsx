@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, radius, shadow, spacing } from "../theme";
 import type { RootStackParamList } from "../../App";
-import { historicoNdvi } from "../services/api";
+import { historicoNdvi, listarPropriedades } from "../services/api";
 
 // ---------------------------------------------------------------
 // Tipos
@@ -50,10 +50,16 @@ export default function NdviHistoricoScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   const [serie, setSerie] = useState<PontoNdvi[]>([]);
+  const [nomePropriedade, setNomePropriedade] = useState("Propriedade");
   const [erro, setErro] = useState<string | null>(null);
   useEffect(() => {
-    historicoNdvi(1).then((dados) => setSerie(dados.map((d) => ({ data: new Date(`${d.dataColeta}T00:00:00`), valor: d.ndvi }))))
-      .catch((e) => setErro(e instanceof Error ? e.message : "Falha ao carregar histórico."));
+    listarPropriedades().then(async (propriedades) => {
+      const principal = propriedades[0];
+      if (!principal) { setSerie([]); return; }
+      setNomePropriedade(principal.nome);
+      const dados = await historicoNdvi(principal.id);
+      setSerie(dados.map((d) => ({ data: new Date(`${d.dataColeta}T00:00:00`), valor: d.ndvi })));
+    }).catch((e) => setErro(e instanceof Error ? e.message : "Falha ao carregar histórico."));
   }, []);
   const recentes = serie.filter((p) => p.data.getTime() >= Date.now() - 7 * 86400000);
   const variacaoSeteDias = recentes.length >= 2 ? recentes.at(-1)!.valor - recentes[0].valor : null;
@@ -67,7 +73,7 @@ export default function NdviHistoricoScreen() {
         <View style={styles.cabecalhoTexto}>
           <Text style={styles.titulo}>Historico NDVI</Text>
           <Text style={styles.subtitulo}>
-            Ultimos 30 dias · Fazenda Esperanca
+            Últimos 30 dias · {nomePropriedade}
           </Text>
         </View>
         <Pressable

@@ -2,9 +2,9 @@ package br.com.fiap.agrosat.dto;
 
 import br.com.fiap.agrosat.model.enums.TipoSensor;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 public class SensorRequest {
 
@@ -16,8 +16,9 @@ public class SensorRequest {
 
     @NotNull(message = "ID da propriedade é obrigatório")
     private Long propriedadeId;
+    @Size(max = 40, message = "Origem deve ter no máximo 40 caracteres")
     private String origem = "API";
-    private LocalDateTime dataHora;
+    private String dataHora;
 
     public TipoSensor getTipo() { return tipo; }
     public void setTipo(TipoSensor tipo) { this.tipo = tipo; }
@@ -29,6 +30,6 @@ public class SensorRequest {
     public void setPropriedadeId(Long propriedadeId) { this.propriedadeId = propriedadeId; }
     public String getOrigem() { return origem; }
     public void setOrigem(String origem) { this.origem = origem; }
-    public LocalDateTime getDataHora() { return dataHora; }
-    public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
+    public String getDataHora() { return dataHora; }
+    public void setDataHora(String dataHora) { this.dataHora = dataHora; }
 }

@@ -63,11 +63,12 @@ export default function SensoresScreen() {
   const [sensores, setSensores] = useState<Sensor[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [recarregando, setRecarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const carregarSensores = useCallback(async () => {
-    setSensores(await listarSensores(PROPRIEDADE_ID));
-    setCarregando(false);
-    setRecarregando(false);
+    try { setSensores(await listarSensores(PROPRIEDADE_ID)); setErro(null); }
+    catch (e) { setErro(e instanceof Error ? e.message : "Falha ao carregar leituras."); }
+    finally { setCarregando(false); setRecarregando(false); }
   }, []);
 
   useEffect(() => {
@@ -84,9 +85,9 @@ export default function SensoresScreen() {
             accessibilityRole="button"
             accessibilityLabel="Atualizar leituras"
             onPress={() => {
-              Haptics.selectionAsync();
+              void Haptics.selectionAsync();
               setRecarregando(true);
-              carregarSensores();
+              void carregarSensores();
             }}
             style={({ pressed }) => [
               styles.botaoAtualizar,
@@ -97,6 +98,7 @@ export default function SensoresScreen() {
           </Pressable>
         }
       />
+      {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
       {carregando ? (
         <View style={styles.listaConteudo}>
@@ -210,6 +212,7 @@ function formatarDataHora(dataIso: string): string {
 // ----- estilos -----
 
 const styles = StyleSheet.create({
+  erro: { color: colors.critical, marginHorizontal: spacing.lg, marginBottom: spacing.md },
   container: { flex: 1, backgroundColor: colors.background },
 
   botaoAtualizar: {

@@ -8,6 +8,8 @@ import br.com.fiap.agrosat.repository.DadoSateliteRepository;
 import br.com.fiap.agrosat.repository.PropriedadeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import br.com.fiap.agrosat.model.enums.TipoDadoSatelite;
+import java.util.List;
 
 @Service
 public class DadoSateliteService {
@@ -41,11 +43,31 @@ public class DadoSateliteService {
                 request.getDataColeta(),
                 propriedade
         );
+        String origem = processamentoService.normalizarOrigem(request.getOrigem());
+        dado.setOrigem(origem);
+        boolean duplicado = repository.findByPropriedade_IdAndTipoAndDataColeta(
+                propriedade.getId(), request.getTipo(), request.getDataColeta()).stream().anyMatch(existente ->
+                decimalIgual(existente.getNdvi(), dado.getNdvi())
+                        && decimalIgual(existente.getPrecipitacaoMm(), dado.getPrecipitacaoMm())
+                        && decimalIgual(existente.getTempMin(), dado.getTempMin())
+                        && decimalIgual(existente.getTempMax(), dado.getTempMax())
+                        && java.util.Objects.equals(existente.getOrigem(), origem));
+        if (duplicado) dado.setValidacao("DUPLICADO");
 
         DadoSatelite salvo = repository.save(dado);
-        salvo.setOrigem(request.getOrigem() == null ? "API" : request.getOrigem());
-        salvo = repository.save(salvo);
         riscoService.verificarRiscos(propriedade.getId());
         return DadoSateliteResponse.fromEntity(salvo);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DadoSateliteResponse> historicoNdvi(Long propriedadeId) {
+        propriedadeRepository.findById(propriedadeId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Propriedade", propriedadeId));
+        return repository.findByPropriedade_IdAndTipoOrderByDataColetaAscIdAsc(propriedadeId, TipoDadoSatelite.NDVI)
+                .stream().map(DadoSateliteResponse::fromEntity).toList();
+    }
+
+    private boolean decimalIgual(java.math.BigDecimal a, java.math.BigDecimal b) {
+        return a == null ? b == null : b != null && a.compareTo(b) == 0;
     }
 }

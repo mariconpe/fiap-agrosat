@@ -27,6 +27,9 @@ public class Sensor {
     @Column(nullable = false, length = 40)
     private String origem = "API";
 
+    @Column(nullable = false, length = 20)
+    private String validacao = "VALIDO";
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "propriedade_id", nullable = false)
     private Propriedade propriedade;
@@ -58,6 +61,8 @@ public class Sensor {
     public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
     public String getOrigem() { return origem; }
     public void setOrigem(String origem) { this.origem = origem; }
+    public String getValidacao() { return validacao; }
+    public void setValidacao(String validacao) { this.validacao = validacao; }
 
     public Propriedade getPropriedade() { return propriedade; }
     public void setPropriedade(Propriedade propriedade) { this.propriedade = propriedade; }

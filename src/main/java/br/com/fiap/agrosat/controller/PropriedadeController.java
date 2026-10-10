@@ -4,8 +4,7 @@ import br.com.fiap.agrosat.dto.*;
 import br.com.fiap.agrosat.service.AlertaService;
 import br.com.fiap.agrosat.service.PropriedadeService;
 import br.com.fiap.agrosat.service.IndicadoresService;
-import br.com.fiap.agrosat.repository.DadoSateliteRepository;
-import br.com.fiap.agrosat.model.enums.TipoDadoSatelite;
+import br.com.fiap.agrosat.service.DadoSateliteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,14 +22,14 @@ public class PropriedadeController {
     private final PropriedadeService service;
     private final AlertaService alertaService;
     private final IndicadoresService indicadoresService;
-    private final DadoSateliteRepository dadoSateliteRepository;
+    private final DadoSateliteService dadoSateliteService;
 
     public PropriedadeController(PropriedadeService service,
-                                  AlertaService alertaService, IndicadoresService indicadoresService, DadoSateliteRepository dadoSateliteRepository) {
+                                  AlertaService alertaService, IndicadoresService indicadoresService, DadoSateliteService dadoSateliteService) {
         this.service = service;
         this.alertaService = alertaService;
         this.indicadoresService = indicadoresService;
-        this.dadoSateliteRepository = dadoSateliteRepository;
+        this.dadoSateliteService = dadoSateliteService;
     }
 
     @GetMapping
@@ -71,6 +70,6 @@ public class PropriedadeController {
 
     @GetMapping("/{id}/ndvi/historico")
     public ResponseEntity<List<br.com.fiap.agrosat.dto.DadoSateliteResponse>> historicoNdvi(@PathVariable Long id) {
-        return ResponseEntity.ok(dadoSateliteRepository.findByPropriedade_IdAndTipoOrderByDataColetaAscIdAsc(id, TipoDadoSatelite.NDVI).stream().map(br.com.fiap.agrosat.dto.DadoSateliteResponse::fromEntity).toList());
+        return ResponseEntity.ok(dadoSateliteService.historicoNdvi(id));
     }
 }

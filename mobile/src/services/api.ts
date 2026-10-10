@@ -5,42 +5,55 @@ import type { Propriedade, NdviResponse, Alerta, Sensor, Produtor } from "../typ
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080/api";
 export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
+export const DEMO_SCENARIO = process.env.EXPO_PUBLIC_DEMO_SCENARIO ?? "risco";
+export let FONTE_DADOS: "API" | "DEMONSTRACAO" = "API";
+type CenarioDemo = "risco" | "sem-risco" | "sem-dados" | "insuficiente" | "historico";
+const cenarioAtual: CenarioDemo = (["risco", "sem-risco", "sem-dados", "insuficiente", "historico"] as string[]).includes(DEMO_SCENARIO)
+  ? DEMO_SCENARIO as CenarioDemo : "risco";
+const dataDemo = (diasAtras: number) => {
+  const d = new Date(); d.setDate(d.getDate() - diasAtras); return d.toISOString().slice(0, 10);
+};
+const horaDemo = (minutosAtras: number) => new Date(Date.now() - minutosAtras * 60000).toISOString();
 
 async function fetchOrMock<T>(
   url: string,
   mock: T,
   options?: RequestInit
 ): Promise<T> {
+  let res: Response;
   try {
-    const res = await fetch(`${BASE_URL}${url}`, {
+    res = await fetch(`${BASE_URL}${url}`, {
       headers: { "Content-Type": "application/json" },
       ...options,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    if (!DEMO_MODE) throw new Error("Não foi possível conectar à API AgroSat.");
-
+  } catch (erro) {
+    if (!DEMO_MODE) throw new Error("Não foi possível conectar à API AgroSat.", { cause: erro });
+    FONTE_DADOS = "DEMONSTRACAO";
     console.log(`[mock] usando dados locais para ${url}`);
     return mock;
   }
+  if (!res.ok) throw new Error(`Falha na API AgroSat: HTTP ${res.status}.`);
+  FONTE_DADOS = "API";
+  return await res.json() as T;
 }
 
 // ---------------------------------------------------------------
 // Propriedades
 // ---------------------------------------------------------------
 
-const MOCK_PROPRIEDADES: Propriedade[] = [
-  {
-    id: 1,
-    nome: "Fazenda Esperança",
-    localizacao: "Lat: -22.85, Long: -48.43 — Botucatu/SP",
-    areaHectares: 120.5,
-    cultura: "Soja",
-    alertasAtivos: 2,
-    criadoEm: new Date().toISOString(),
-  },
-];
+const NOME_CENARIO: Record<CenarioDemo, string> = {
+  risco: "Fazenda Esperança — risco ativo",
+  "sem-risco": "Fazenda Modelo — sem risco",
+  "sem-dados": "Fazenda Modelo — sem dados",
+  insuficiente: "Fazenda Modelo — série insuficiente",
+  historico: "Fazenda Modelo — alertas resolvidos",
+};
+const MOCK_PROPRIEDADES: Propriedade[] = [{
+  id: 1, nome: NOME_CENARIO[cenarioAtual],
+  localizacao: "Lat: -22.85, Long: -48.43 — Botucatu/SP",
+  areaHectares: 120.5, cultura: "Soja",
+  alertasAtivos: cenarioAtual === "risco" ? 2 : cenarioAtual === "historico" ? 1 : 0, criadoEm: new Date().toISOString(),
+}];
 
 export async function listarPropriedades(): Promise<Propriedade[]> {
   return fetchOrMock("/propriedades", MOCK_PROPRIEDADES);
@@ -50,11 +63,9 @@ export async function listarPropriedades(): Promise<Propriedade[]> {
 // NDVI
 // ---------------------------------------------------------------
 
-const MOCK_NDVI: NdviResponse = {
-  ndvi: 0.41,
-  dataColeta: new Date().toISOString().split("T")[0],
-  status: "ATENCAO",
-};
+const MOCK_NDVI: NdviResponse = cenarioAtual === "sem-dados"
+  ? { ndvi: null, dataColeta: null, status: "SEM_DADOS" }
+  : { ndvi: cenarioAtual === "sem-risco" || cenarioAtual === "historico" ? 0.635 : 0.41, dataColeta: dataDemo(0), status: cenarioAtual === "sem-risco" || cenarioAtual === "historico" ? "SAUDAVEL" : "ATENCAO" };
 
 export async function consultarNdvi(
   propriedadeId: number
@@ -66,7 +77,7 @@ export async function consultarNdvi(
 // Alertas
 // ---------------------------------------------------------------
 
-const MOCK_ALERTAS: Alerta[] = [
+const ALERTAS_RISCO: Alerta[] = [
   {
     id: 1,
     tipo: "SECA",
@@ -90,6 +101,11 @@ const MOCK_ALERTAS: Alerta[] = [
     propriedadeNome: "Fazenda Esperança",
   },
 ];
+const MOCK_ALERTAS: Alerta[] = cenarioAtual === "risco" ? ALERTAS_RISCO
+  : cenarioAtual === "historico" ? [
+    { ...ALERTAS_RISCO[0], id: 3, lida: true, resolvido: true },
+    { ...ALERTAS_RISCO[1], id: 4, lida: false, resolvido: false },
+  ] : [];
 
 export async function listarAlertas(
   propriedadeId: number
@@ -118,10 +134,22 @@ export interface Indicadores {
 }
 export interface MedicaoNdvi { ndvi: number; dataColeta: string }
 export async function consultarIndicadores(id: number): Promise<Indicadores> {
-  return fetchOrMock(`/propriedades/${id}/indicadores`, { umidadeAtual: null, chuvaAcumulada15Dias: 0, temperaturaMaxima7Dias: null, estadoAmbiente: "SEM_DADOS" });
+  const mock: Indicadores = cenarioAtual === "risco"
+    ? { umidadeAtual: 18.5, chuvaAcumulada15Dias: 3, temperaturaMaxima7Dias: 32.5, estadoAmbiente: "ATENCAO" }
+    : cenarioAtual === "sem-risco" || cenarioAtual === "historico"
+      ? { umidadeAtual: 35, chuvaAcumulada15Dias: 18, temperaturaMaxima7Dias: 27, estadoAmbiente: "NORMAL" }
+      : cenarioAtual === "insuficiente"
+        ? { umidadeAtual: null, chuvaAcumulada15Dias: 0, temperaturaMaxima7Dias: 35, estadoAmbiente: "ATENCAO" }
+        : { umidadeAtual: null, chuvaAcumulada15Dias: 0, temperaturaMaxima7Dias: null, estadoAmbiente: "SEM_DADOS" };
+  return fetchOrMock(`/propriedades/${id}/indicadores`, mock);
 }
 export async function historicoNdvi(id: number): Promise<MedicaoNdvi[]> {
-  return fetchOrMock(`/propriedades/${id}/ndvi/historico`, []);
+  const mock: MedicaoNdvi[] = cenarioAtual === "risco"
+    ? [{ ndvi: 0.68, dataColeta: dataDemo(14) }, { ndvi: 0.58, dataColeta: dataDemo(6) }, { ndvi: 0.47, dataColeta: dataDemo(3) }, { ndvi: 0.41, dataColeta: dataDemo(0) }]
+    : cenarioAtual === "sem-risco" || cenarioAtual === "historico"
+      ? [{ ndvi: 0.64, dataColeta: dataDemo(3) }, { ndvi: 0.635, dataColeta: dataDemo(0) }]
+      : cenarioAtual === "insuficiente" ? [{ ndvi: 0.4, dataColeta: dataDemo(0) }] : [];
+  return fetchOrMock(`/propriedades/${id}/ndvi/historico`, mock);
 }
 
 export async function marcarAlertaComoLida(alertaId: number): Promise<Alerta> {
@@ -133,29 +161,32 @@ export async function marcarAlertaComoLida(alertaId: number): Promise<Alerta> {
 // Sensores
 // ---------------------------------------------------------------
 
-const MOCK_SENSORES: Sensor[] = [
+const SENSORES_RISCO: Sensor[] = [
   {
     id: 1,
     tipo: "UMIDADE_SOLO",
     valor: 18.5,
-    dataHora: new Date().toISOString(),
+    dataHora: horaDemo(10),
     propriedadeId: 1,
   },
   {
     id: 2,
     tipo: "UMIDADE_SOLO",
     valor: 24.1,
-    dataHora: new Date().toISOString(),
+    dataHora: horaDemo(30),
     propriedadeId: 1,
   },
   {
     id: 3,
     tipo: "TEMPERATURA",
     valor: 32.5,
-    dataHora: new Date().toISOString(),
+    dataHora: horaDemo(10),
     propriedadeId: 1,
   },
 ];
+const MOCK_SENSORES: Sensor[] = cenarioAtual === "risco" ? SENSORES_RISCO
+  : cenarioAtual === "sem-risco" || cenarioAtual === "historico" ? [{ id: 11, tipo: "UMIDADE_SOLO", valor: 35, dataHora: horaDemo(10), propriedadeId: 1 }]
+    : [];
 
 export async function listarSensores(
   propriedadeId: number

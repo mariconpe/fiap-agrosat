@@ -2,6 +2,7 @@ package br.com.fiap.agrosat.dto;
 
 import br.com.fiap.agrosat.model.enums.TipoDadoSatelite;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,6 +25,7 @@ public class DadoSateliteRequest {
 
     @NotNull(message = "ID da propriedade é obrigatório")
     private Long propriedadeId;
+    @Size(max = 40, message = "Origem deve ter no máximo 40 caracteres")
     private String origem = "API";
 
     public TipoDadoSatelite getTipo() { return tipo; }

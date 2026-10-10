@@ -90,7 +90,7 @@ public class RiscoService {
 
         // soma a precipitação dos últimos 15 dias
         List<DadoSatelite> climaRecente = dadoSateliteRepository
-                .findByPropriedade_IdAndTipoAndDataColetaAfterOrderByDataColetaAsc(
+                .findByPropriedade_IdAndTipoAndDataColetaAfterOrderByDataColetaAscIdAsc(
                         propId, TipoDadoSatelite.CLIMA, quinzeDiasAtras);
 
         if (climaRecente.isEmpty()) return null;
@@ -136,7 +136,7 @@ public class RiscoService {
 
         // pega histórico de NDVI dos últimos 7 dias
         List<DadoSatelite> ndviRecente = dadoSateliteRepository
-                .findByPropriedade_IdAndTipoAndDataColetaAfterOrderByDataColetaAsc(
+                .findByPropriedade_IdAndTipoAndDataColetaAfterOrderByDataColetaAscIdAsc(
                         propId, TipoDadoSatelite.NDVI, seteDiasAtras);
 
         if (ndviRecente.size() < 2) {

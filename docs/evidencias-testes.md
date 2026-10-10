@@ -43,3 +43,20 @@ br.com.fiap.agrosat.config.DataLoader : Seed concluído — produtor: joao@agros
 ```
 
 Relatórios brutos: `target/surefire-reports/` (gerados a cada `mvn test`).
+
+## Execução atual — 10/10/2026
+
+Ambiente: Linux/WSL, OpenJDK 17, Maven, Spring Boot 3.3.5 e H2 em memória.
+
+```text
+mvn -q test                         BUILD SUCCESS
+  AgrosatApiIntegrationTest         8 passed
+  AgrosatFluxosIntegracaoTest       8 passed
+  ProcessamentoCsvServiceTest       1 passed
+  Total                             17 passed, 0 failures, 0 errors
+npx tsc --noEmit (mobile/)          passed
+```
+
+O teste completo usa o mock maker subclass (`src/test/resources/mockito-extensions/`), sem depender da anexação do agente inline. O runner Java também foi executado com `--spring.main.web-application-type=none --agrosat.csv.processar=true`; o log confirmou a geração de `data/processed/leituras_validadas.csv` a partir do CSV raw. O teste de processamento compara a saída Java integralmente com o arquivo versionado.
+
+Os cenários exercitados incluem alerta automático de seca e praga, condições sem alerta, ausência de dados, histórico NDVI insuficiente, duplicatas, alertas lidos/resolvidos, ingestão com offset UTC, limites agronômicos válidos/inválidos, dados climáticos incoerentes, indicadores e histórico cronológico. O seed também fornece os cenários online de controle, vazio e insuficiente; no app offline podem ser selecionados `risco`, `sem-risco`, `sem-dados`, `insuficiente` e `historico`.

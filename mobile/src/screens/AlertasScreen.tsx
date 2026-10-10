@@ -195,6 +195,9 @@ function CartaoAlerta({
             <Text style={styles.cardTitulo}>
               {isSeca ? "Risco de seca" : "Possível praga"}
             </Text>
+            <Text style={alerta.resolvido ? styles.seloResolvido : styles.seloAtivo}>
+              {alerta.resolvido ? "Resolvido" : "Ativo"}
+            </Text>
           </View>
           <Text style={styles.cardData}>{formatarDataHora(alerta.dataCriacao)}</Text>
         </View>
@@ -297,6 +300,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   seloTexto: { fontSize: 12, fontWeight: "700" },
+  seloResolvido: { fontSize: 10, color: colors.success },
+  seloAtivo: { fontSize: 10, color: colors.critical },
 
   cardMensagem: {
     fontSize: 14,

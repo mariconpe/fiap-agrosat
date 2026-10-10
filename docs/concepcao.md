@@ -141,7 +141,16 @@ recebem origem `API` por padrão; o simulador usa `SIMULADOR_IOT`. O timestamp
 de sensor é tratado como UTC quando informado sem fuso, e o horário de ingestão
 é UTC quando omitido. O mapa do app é ilustrativo enquanto não houver geometria
 do talhão. Configure `EXPO_PUBLIC_API_URL` e habilite `EXPO_PUBLIC_DEMO_MODE`
-apenas para usar respostas de demonstração sem conexão.
+apenas para usar respostas de demonstração sem conexão. O modo offline tem os
+cenários `risco`, `sem-risco`, `sem-dados`, `insuficiente` e `historico`, selecionáveis por
+`EXPO_PUBLIC_DEMO_SCENARIO`.
+
+Para reproduzir a amostra processada pelo código Java, inicie a API com
+`--agrosat.csv.processar=true`. O runner lê `data/raw/leituras_simuladas.csv`,
+normaliza timestamps, marca entradas inválidas e duplicadas, e grava
+`data/processed/leituras_validadas.csv`. O endpoint CSV exporta dados já
+persistidos de uma propriedade e mantém a origem, timestamp UTC e resultado de
+validação de cada sensor.
 
 ---
 

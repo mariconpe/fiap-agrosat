@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Configuration;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Clock;
 
 /**
  * Popula o banco H2 com dados de demonstração ao iniciar a aplicação.
@@ -71,7 +72,7 @@ public class DataLoader implements CommandLineRunner {
         ));
 
         // ── Sensores IoT ──
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = LocalDateTime.now(Clock.systemUTC());
         sensorRepository.save(new Sensor(TipoSensor.UMIDADE_SOLO,
                 new BigDecimal("18.5"), agora.minusMinutes(30), fazenda));
         sensorRepository.save(new Sensor(TipoSensor.UMIDADE_SOLO,
@@ -80,7 +81,7 @@ public class DataLoader implements CommandLineRunner {
                 new BigDecimal("19.1"), agora.minusMinutes(90), fazenda));
 
         // ── Dados de satélite (NDVI) ──
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = LocalDate.now(Clock.systemUTC());
         dadoSateliteRepository.save(new DadoSatelite(
                 TipoDadoSatelite.NDVI,
                 new BigDecimal("0.650"), null, null, null,
@@ -124,6 +125,35 @@ public class DataLoader implements CommandLineRunner {
                 new BigDecimal("22.5"), new BigDecimal("32.0"),
                 hoje, fazenda));
 
-        log.info("Seed concluído — produtor: joao@agrosat.com.br / senha: 123456");
+        // ── Cenário de controle: condições estáveis, sem alerta ──
+        Propriedade controle = propriedadeRepository.save(new Propriedade(
+                "Fazenda Modelo — Sem Risco",
+                "Lat: -22.86, Long: -48.44 — Botucatu/SP",
+                new BigDecimal("42.0"), produtor, soja));
+        sensorRepository.save(new Sensor(TipoSensor.UMIDADE_SOLO, new BigDecimal("35.0"), agora, controle));
+        dadoSateliteRepository.save(new DadoSatelite(TipoDadoSatelite.CLIMA, null,
+                new BigDecimal("18.0"), new BigDecimal("20.0"), new BigDecimal("27.0"), hoje, controle));
+        dadoSateliteRepository.save(new DadoSatelite(TipoDadoSatelite.NDVI,
+                new BigDecimal("0.640"), null, null, null, hoje.minusDays(3), controle));
+        dadoSateliteRepository.save(new DadoSatelite(TipoDadoSatelite.NDVI,
+                new BigDecimal("0.635"), null, null, null, hoje, controle));
+
+        // ── Cenário sem dados: respostas analíticas vazias/SEM_DADOS ──
+        propriedadeRepository.save(new Propriedade(
+                "Fazenda Modelo — Sem Dados",
+                "Lat: -22.87, Long: -48.45 — Botucatu/SP",
+                new BigDecimal("18.0"), produtor, milho));
+
+        // ── Cenário insuficiente: NDVI isolado não pode disparar regra de praga ──
+        Propriedade insuficiente = propriedadeRepository.save(new Propriedade(
+                "Fazenda Modelo — Série Insuficiente",
+                "Lat: -22.88, Long: -48.46 — Botucatu/SP",
+                new BigDecimal("25.0"), produtor, soja));
+        dadoSateliteRepository.save(new DadoSatelite(TipoDadoSatelite.CLIMA, null,
+                new BigDecimal("0.0"), new BigDecimal("24.0"), new BigDecimal("35.0"), hoje, insuficiente));
+        dadoSateliteRepository.save(new DadoSatelite(TipoDadoSatelite.NDVI,
+                new BigDecimal("0.400"), null, null, null, hoje, insuficiente));
+
+        log.info("Seed concluído — produtor: joao@agrosat.com.br / senha: 123456; cenários de risco, controle e dados insuficientes carregados");
     }
 }

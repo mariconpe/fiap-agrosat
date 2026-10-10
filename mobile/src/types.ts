@@ -28,6 +28,7 @@ export interface Alerta {
   severidade: "BAIXA" | "MEDIA" | "ALTA";
   mensagem: string;
   lida: boolean;
+  resolvido?: boolean;
   dataCriacao: string;
   propriedadeNome: string;
 }

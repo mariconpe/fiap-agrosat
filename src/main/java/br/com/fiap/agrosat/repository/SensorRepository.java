@@ -12,4 +12,5 @@ public interface SensorRepository extends JpaRepository<Sensor, Long> {
     Optional<Sensor> findTopByPropriedade_IdAndTipoOrderByDataHoraDescIdDesc(Long propriedadeId, TipoSensor tipo);
     List<Sensor> findByPropriedade_IdAndTipoOrderByDataHoraAsc(Long propriedadeId, TipoSensor tipo);
     List<Sensor> findByPropriedade_IdOrderByDataHoraDescIdDesc(Long propriedadeId);
+    boolean existsByPropriedade_IdAndTipoAndValorAndDataHoraAndOrigem(Long propriedadeId, TipoSensor tipo, java.math.BigDecimal valor, java.time.LocalDateTime dataHora, String origem);
 }

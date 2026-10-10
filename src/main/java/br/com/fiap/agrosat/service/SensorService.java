@@ -37,10 +37,13 @@ public class SensorService {
         Sensor sensor = new Sensor(
                 request.getTipo(),
                 request.getValor(),
-                request.getDataHora() == null ? LocalDateTime.now(java.time.Clock.systemUTC()) : request.getDataHora(),
-                request.getOrigem() == null ? "API" : request.getOrigem(),
+                processamentoService.normalizarDataHoraUtc(request.getDataHora()),
+                processamentoService.normalizarOrigem(request.getOrigem()),
                 propriedade
         );
+        boolean duplicado = repository.existsByPropriedade_IdAndTipoAndValorAndDataHoraAndOrigem(
+                propriedade.getId(), request.getTipo(), request.getValor(), sensor.getDataHora(), sensor.getOrigem());
+        if (duplicado) sensor.setValidacao("DUPLICADO");
 
         Sensor salvo = repository.save(sensor);
         riscoService.verificarRiscos(propriedade.getId());

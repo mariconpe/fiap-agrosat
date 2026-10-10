@@ -16,6 +16,7 @@ public class DadoSateliteResponse {
     private LocalDate dataColeta;
     private String propriedadeNome;
     private String origem;
+    private String validacao;
 
     public static DadoSateliteResponse fromEntity(DadoSatelite d) {
         DadoSateliteResponse r = new DadoSateliteResponse();
@@ -29,6 +30,7 @@ public class DadoSateliteResponse {
         r.propriedadeNome = d.getPropriedade() != null
                 ? d.getPropriedade().getNome() : null;
         r.origem = d.getOrigem();
+        r.validacao = d.getValidacao();
         return r;
     }
 
@@ -41,4 +43,5 @@ public class DadoSateliteResponse {
     public LocalDate getDataColeta() { return dataColeta; }
     public String getPropriedadeNome() { return propriedadeNome; }
     public String getOrigem() { return origem; }
+    public String getValidacao() { return validacao; }
 }

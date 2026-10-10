@@ -19,7 +19,7 @@ import {
   type ParamListBase,
 } from "@react-navigation/native";
 
-import { consultarNdvi, listarPropriedades, listarSensores, consultarIndicadores, historicoNdvi, listarAlertas } from "../services/api";
+import { consultarNdvi, listarPropriedades, listarSensores, consultarIndicadores, historicoNdvi, listarAlertas, FONTE_DADOS } from "../services/api";
 import type { Alerta, NdviResponse, Propriedade, Sensor } from "../types";
 import InsightSheet, { type InsightConteudo } from "../components/InsightSheet";
 import ScreenHeader from "../components/ScreenHeader";
@@ -53,6 +53,7 @@ export default function DashboardScreen() {
   const [propriedade, setPropriedade] = useState<Propriedade | null>(null);
   const [ndvi, setNdvi] = useState<NdviResponse | null>(null);
   const [umidadeSerie, setUmidadeSerie] = useState<number[]>([]);
+  const [umidadeDatas, setUmidadeDatas] = useState<string[]>([]);
   const [horaAtualizacao, setHoraAtualizacao] = useState<string | null>(null);
   const [insightAtivo, setInsightAtivo] = useState<InsightConteudo | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -61,6 +62,7 @@ export default function DashboardScreen() {
   const [ndviHistorico, setNdviHistorico] = useState<{ ndvi: number; dataColeta: string }[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [alertasHistorico, setAlertasHistorico] = useState<Alerta[]>([]);
+  const [fonteDados, setFonteDados] = useState<"API" | "DEMONSTRACAO">("API");
 
   const carregarDados = useCallback(async () => {
     try {
@@ -76,10 +78,13 @@ export default function DashboardScreen() {
         listarAlertas(principal.id),
       ]);
       setNdvi(ndviData);
-      setUmidadeSerie(extrairSerieUmidade(sensores));
+      const leituras = extrairLeiturasUmidade(sensores);
+      setUmidadeSerie(leituras.map((sensor) => sensor.valor));
+      setUmidadeDatas(leituras.map((sensor) => sensor.dataHora));
       setIndicadores(indicadoresData);
       setNdviHistorico(historico);
       setAlertasHistorico(alertas);
+      setFonteDados(FONTE_DADOS);
     }
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Falha ao carregar dados da API.");
@@ -114,7 +119,7 @@ export default function DashboardScreen() {
   const status = STATUS_NDVI[ndvi?.status ?? "SEM_DADOS"];
   const valorNdvi = ndvi?.ndvi ?? null;
   const alertasAtivos = propriedade?.alertasAtivos ?? 0;
-  const umidadeAtual = indicadores?.umidadeAtual ?? (umidadeSerie.length > 0 ? umidadeSerie.at(-1) : null);
+  const umidadeAtual = indicadores?.umidadeAtual ?? umidadeSerie.at(-1) ?? null;
   const ndviSeteDias = ndviHistorico.filter((medicao) => new Date(medicao.dataColeta).getTime() >= Date.now() - 7 * 86400000);
   const variacaoNdvi = ndviSeteDias.length >= 2 ? ndviSeteDias.at(-1)!.ndvi - ndviSeteDias[0]!.ndvi : null;
   const umidadeCritica = umidadeAtual != null && umidadeAtual < 20;
@@ -141,7 +146,7 @@ export default function DashboardScreen() {
           propriedade?.areaHectares
         )} ha`}
       />
-      {erro ? <Text style={styles.heroNota}>{erro}</Text> : <Text style={styles.heroNota}>Dados {process.env.EXPO_PUBLIC_DEMO_MODE === "true" ? "offline de demonstração" : "integrados à API"}</Text>}
+      {erro ? <Text style={styles.heroNota}>{erro}</Text> : <Text style={styles.heroNota}>Dados {fonteDados === "API" ? "integrados à API" : "offline de demonstração"}</Text>}
 
       {/* talhão visto do satélite, tingido pelo status do NDVI */}
       <View style={styles.heroCard}>
@@ -228,7 +233,7 @@ export default function DashboardScreen() {
         </Pressable>
       )}
       <Text style={styles.heroNota}>
-        Alertas persistidos: {alertasHistorico.filter((a) => a.tipo === "SECA").length} seca · {alertasHistorico.filter((a) => a.tipo === "PRAGA").length} praga · {alertasHistorico.filter((a) => a.severidade === "ALTA").length} alta · {alertasHistorico.filter((a) => !a.lida).length} não lidos.
+        Alertas persistidos: seca {alertasHistorico.filter((a) => a.tipo === "SECA").length} · praga {alertasHistorico.filter((a) => a.tipo === "PRAGA").length} · alta {alertasHistorico.filter((a) => a.severidade === "ALTA").length} · média {alertasHistorico.filter((a) => a.severidade === "MEDIA").length} · baixa {alertasHistorico.filter((a) => a.severidade === "BAIXA").length} · ativos {alertasHistorico.filter((a) => !a.resolvido).length} · resolvidos {alertasHistorico.filter((a) => a.resolvido).length} · não lidos {alertasHistorico.filter((a) => !a.lida).length}.
       </Text>
 
       {/* hoje */}
@@ -266,6 +271,7 @@ export default function DashboardScreen() {
           </Text>
           <GraficoBarras
             valores={umidadeSerie}
+            datas={umidadeDatas}
             cor={umidadeCritica ? colors.critical : colors.brand}
           />
         </Pressable>
@@ -273,28 +279,28 @@ export default function DashboardScreen() {
         <CartaoHoje
           titulo="Chuva"
           valor={indicadores ? `${indicadores.chuvaAcumulada15Dias.toFixed(0)} mm` : "—"}
-          corValor={colors.critical}
+          corValor={indicadores && indicadores.chuvaAcumulada15Dias < 10 ? colors.critical : colors.brand}
           nota="Acumulado em 15 dias"
           rodape="Mínimo saudável: 10 mm"
-          aoTocar={() => abrirInsight(INSIGHT_CHUVA)}
+          aoTocar={() => abrirInsight(montarInsightChuva(indicadores?.chuvaAcumulada15Dias ?? null))}
         />
         <CartaoHoje
           titulo="Temperatura"
           valor={indicadores?.temperaturaMaxima7Dias != null ? `${indicadores.temperaturaMaxima7Dias.toFixed(0)}°C` : "—"}
-          corValor={colors.warning}
-          nota="Máxima de hoje"
-          rodape="Mínima de 22°C · alerta acima de 30°C"
-          aoTocar={() => abrirInsight(INSIGHT_TEMPERATURA)}
+          corValor={indicadores?.temperaturaMaxima7Dias != null && indicadores.temperaturaMaxima7Dias > 30 ? colors.warning : colors.ink}
+          nota="Máxima em 7 dias"
+          rodape="Alerta experimental acima de 30°C"
+          aoTocar={() => abrirInsight(montarInsightTemperatura(indicadores?.temperaturaMaxima7Dias ?? null))}
         />
         <CartaoHoje
           titulo="NDVI em 7 dias"
           valor={variacaoNdvi != null ? variacaoNdvi.toFixed(2).replace("-", "−") : "—"}
-          corValor={colors.critical}
+          corValor={variacaoNdvi != null && variacaoNdvi < -0.15 ? colors.critical : colors.brand}
           nota="Variação do vigor"
-          rodape="Queda além do limite de 0,15"
+          rodape={variacaoNdvi == null ? "Dados insuficientes na janela" : "Janela real de 7 dias"}
           aoTocar={() =>
             abrirInsight({
-              ...INSIGHT_NDVI,
+              ...montarInsightNdvi(variacaoNdvi),
               acao: {
                 rotulo: "Ver histórico completo",
                 aoTocar: () => {
@@ -312,6 +318,7 @@ export default function DashboardScreen() {
           <View style={styles.graficoSheet}>
             <GraficoBarras
               valores={umidadeSerie}
+              datas={umidadeDatas}
               cor={umidadeCritica ? colors.critical : colors.brand}
             />
             <Text style={styles.graficoSheetNota}>Últimas 6 leituras do sensor</Text>
@@ -373,11 +380,11 @@ function montarInsightUmidade(umidadeAtual: number | null): InsightConteudo {
 
 const INSIGHT_CHUVA: InsightConteudo = {
   titulo: "Chuva",
-  valor: "3 mm",
-  corValor: colors.critical,
-  statusLabel: "Muito abaixo",
-  statusCor: colors.critical,
-  statusTinta: colors.criticalTint,
+  valor: "—",
+  corValor: colors.inkTertiary,
+  statusLabel: "Sem dados",
+  statusCor: colors.inkTertiary,
+  statusTinta: colors.surfaceMuted,
   fonte: "Satélite meteorológico · acumulado de 15 dias",
   oQueE:
     "Estimativa de precipitação por satélite para a área da propriedade, somada nos últimos 15 dias. Dispensa pluviômetro físico no talhão.",
@@ -386,18 +393,26 @@ const INSIGHT_CHUVA: InsightConteudo = {
     { cor: colors.warning, texto: "Entre 10 mm e 25 mm: suficiente apenas com solo já úmido" },
     { cor: colors.success, texto: "Acima de 25 mm: reposição adequada de água" },
   ],
-  recomendacao:
-    "Acumulado de 3 mm está bem abaixo do mínimo. Cruze com a umidade do solo antes de decidir a lâmina de irrigação.",
+  recomendacao: "Cruze o acumulado com a umidade do solo antes de decidir a irrigação.",
 };
+
+function montarInsightChuva(mm: number | null): InsightConteudo {
+  const abaixoDoLimite = mm != null && mm < 10;
+  return { ...INSIGHT_CHUVA, valor: mm == null ? "—" : `${mm.toFixed(1).replace(".", ",")} mm`, corValor: abaixoDoLimite ? colors.critical : colors.ink,
+    statusLabel: mm == null ? "Sem dados" : abaixoDoLimite ? "Abaixo do limite" : "Acumulado adequado",
+    statusCor: mm == null ? colors.inkTertiary : abaixoDoLimite ? colors.critical : colors.success,
+    statusTinta: mm == null ? colors.surfaceMuted : abaixoDoLimite ? colors.criticalTint : colors.successTint,
+    recomendacao: mm == null ? "Ainda não há leituras de chuva nos últimos 15 dias." : abaixoDoLimite ? `O acumulado de ${mm.toFixed(1)} mm está abaixo de 10 mm. Confira a umidade do solo antes de irrigar.` : `O acumulado de ${mm.toFixed(1)} mm está acima do limite experimental de 10 mm.` };
+}
 
 const INSIGHT_TEMPERATURA: InsightConteudo = {
   titulo: "Temperatura",
-  valor: "32°C",
+  valor: "—",
   corValor: colors.warning,
   statusLabel: "Calor extremo",
   statusCor: colors.warning,
   statusTinta: colors.warningTint,
-  fonte: "Satélite · máxima e mínima de hoje",
+  fonte: "Dado climático · máxima em 7 dias",
   oQueE:
     "Temperaturas máxima e mínima diárias estimadas por satélite para o talhão. Calor prolongado acelera a evaporação e o ciclo de pragas.",
   comoLer: [
@@ -405,13 +420,21 @@ const INSIGHT_TEMPERATURA: InsightConteudo = {
     { cor: colors.warning, texto: "Entre 25°C e 30°C: atenção à perda de água" },
     { cor: colors.critical, texto: "Acima de 30°C: favorece pragas e estresse térmico" },
   ],
-  recomendacao:
-    "Máxima de 32°C favorece percevejo e lagarta. Reforce o monitoramento nas horas mais quentes do dia.",
+  recomendacao: "Acompanhe as leituras de temperatura durante a janela de sete dias.",
 };
+
+function montarInsightTemperatura(temp: number | null): InsightConteudo {
+  const alta = temp != null && temp > 30;
+  return { ...INSIGHT_TEMPERATURA, valor: temp == null ? "—" : `${temp.toFixed(1).replace(".", ",")}°C`,
+    corValor: alta ? colors.warning : colors.ink, statusLabel: temp == null ? "Sem dados" : alta ? "Acima do limite" : "Dentro do limite",
+    statusCor: temp == null ? colors.inkTertiary : alta ? colors.warning : colors.success,
+    statusTinta: temp == null ? colors.surfaceMuted : alta ? colors.warningTint : colors.successTint,
+    recomendacao: temp == null ? "Não há leituras climáticas nos últimos sete dias." : alta ? `A máxima de ${temp.toFixed(1)}°C passou do limite experimental de 30°C.` : `A máxima de ${temp.toFixed(1)}°C não passou do limite experimental de 30°C.` };
+}
 
 const INSIGHT_NDVI: InsightConteudo = {
   titulo: "NDVI em 7 dias",
-  valor: "−0,17",
+  valor: "—",
   corValor: colors.critical,
   statusLabel: "Queda acelerada",
   statusCor: colors.critical,
@@ -424,9 +447,18 @@ const INSIGHT_NDVI: InsightConteudo = {
     { cor: colors.warning, texto: "Entre 0,05 e 0,15: observe os talhões com mais atenção" },
     { cor: colors.critical, texto: "Acima de 0,15: investigue praga ou estresse no campo" },
   ],
-  recomendacao:
-    "A queda de 0,17 passou do limite. Agende inspeção de campo na área tingida do mapa antes da próxima aplicação.",
+  recomendacao: "São necessárias ao menos duas medições na janela de sete dias.",
 };
+
+function montarInsightNdvi(variacao: number | null): InsightConteudo {
+  const quedaCritica = variacao != null && variacao < -0.15;
+  return { ...INSIGHT_NDVI, valor: variacao == null ? "—" : variacao.toFixed(2).replace("-", "−").replace(".", ","),
+    corValor: quedaCritica ? colors.critical : colors.brand,
+    statusLabel: variacao == null ? "Dados insuficientes" : quedaCritica ? "Queda acelerada" : "Variação observada",
+    statusCor: variacao == null ? colors.inkTertiary : quedaCritica ? colors.critical : colors.success,
+    statusTinta: variacao == null ? colors.surfaceMuted : quedaCritica ? colors.criticalTint : colors.successTint,
+    recomendacao: variacao == null ? "Ainda não existem duas medições nos últimos sete dias para calcular a variação." : quedaCritica ? `A queda de ${Math.abs(variacao).toFixed(2)} passou do limite experimental de 0,15. Avalie inspeção de campo.` : `A variação de ${variacao.toFixed(2)} está dentro do limite experimental de queda de 0,15.` };
+}
 
 function PontoPulsante() {
   const isReducedMotion = useReducedMotion();
@@ -490,7 +522,7 @@ function CartaoHoje({
   );
 }
 
-function GraficoBarras({ valores, cor }: Readonly<{ valores: number[]; cor: string }>) {
+function GraficoBarras({ valores, cor, datas = [] }: Readonly<{ valores: number[]; cor: string; datas?: string[] }>) {
   const isReducedMotion = useReducedMotion();
   const entrada = useRef(
     valores.map(() => new Animated.Value(0))
@@ -526,8 +558,8 @@ function GraficoBarras({ valores, cor }: Readonly<{ valores: number[]; cor: stri
           ? 1
           : 0.25 + (indice / valores.length) * 0.35;
         return (
+          <View key={indice} style={styles.graficoColuna}>
           <Animated.View
-            key={indice}
             style={[
               styles.graficoBarra,
               {
@@ -548,6 +580,8 @@ function GraficoBarras({ valores, cor }: Readonly<{ valores: number[]; cor: stri
               },
             ]}
           />
+          {datas[indice] ? <Text style={styles.graficoData}>{formatarHora(datas[indice])}</Text> : null}
+          </View>
         );
       })}
     </View>
@@ -620,12 +654,15 @@ function DashboardSkeleton({ paddingTop }: Readonly<{ paddingTop: number }>) {
 
 // ----- helpers -----
 
-function extrairSerieUmidade(sensores: Sensor[]): number[] {
+function extrairLeiturasUmidade(sensores: Sensor[]): Sensor[] {
   return sensores
     .filter((sensor) => sensor.tipo === "UMIDADE_SOLO")
     .sort((a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime())
-    .slice(-6)
-    .map((sensor) => sensor.valor);
+    .slice(-6);
+}
+
+function formatarHora(dataHora: string): string {
+  return new Date(dataHora).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function primeiroNome(nome?: string): string {
@@ -779,6 +816,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   graficoBarra: { flex: 1, borderRadius: 3 },
+  graficoColuna: { flex: 1, alignItems: "center", height: "100%", justifyContent: "flex-end" },
+  graficoData: { fontSize: 8, color: colors.inkTertiary, marginTop: 2 },
   graficoSheet: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
